@@ -27,15 +27,20 @@ export default function Room() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const supabase = useSupabase();
-  const { currentRoom, currentParticipant, leaveRoom: clearRoom } = useRoomStore();
+  const { currentRoom, currentParticipant, setRoom, setParticipant, leaveRoom: clearRoom } = useRoomStore();
   const [selectedVote, setSelectedVote] = useState<VoteValue | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [nickname, setNickname] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
 
   useEffect(() => {
+    // If user is not in a room, show join modal instead of redirecting
     if (!currentRoom || !currentParticipant) {
-      navigate('/');
+      setShowJoinModal(true);
     }
-  }, [currentRoom, currentParticipant, navigate]);
+  }, [currentRoom, currentParticipant]);
 
   // Update participant status when component mounts/unmounts
   useEffect(() => {
@@ -101,6 +106,88 @@ export default function Room() {
       console.error('Failed to copy link:', err);
     }
   };
+
+  const handleJoinFromLink = async () => {
+    if (!nickname.trim()) {
+      setJoinError(t('errors.nicknameRequired'));
+      return;
+    }
+
+    if (!id) {
+      navigate('/');
+      return;
+    }
+
+    setIsJoining(true);
+    setJoinError('');
+
+    try {
+      const { room, participant } = await supabase.joinRoom(id, nickname.trim());
+      setRoom(room);
+      setParticipant(participant);
+      setShowJoinModal(false);
+    } catch (error) {
+      console.error('Failed to join room:', error);
+      setJoinError(t('errors.roomNotFound'));
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  // Show join modal when user lands on room link without being in the room
+  if (showJoinModal && (!currentRoom || !currentParticipant)) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 transition-colors flex items-center justify-center p-4">
+        <Card variant="elevated" className="w-full max-w-md p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              {t('home.joinRoom')}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              {t('home.enterNickname')}
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Input
+              label={t('home.enterNickname')}
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleJoinFromLink();
+                }
+              }}
+              error={joinError}
+              placeholder="John Doe"
+              maxLength={20}
+              autoFocus
+            />
+
+            <div className="flex gap-3">
+              <Button
+                variant="ghost"
+                size="lg"
+                fullWidth
+                onClick={() => navigate('/')}
+              >
+                {t('home.cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleJoinFromLink}
+                disabled={!nickname.trim() || isJoining}
+              >
+                {isJoining ? t('home.joining') : t('home.join')}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (!currentRoom || !currentParticipant) {
     return null;

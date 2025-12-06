@@ -14,6 +14,9 @@ export const translations = {
         roomName: 'Room name',
         or: 'or',
         start: 'Start',
+        cancel: 'Cancel',
+        join: 'Join',
+        joining: 'Joining...',
       },
       room: {
         roomId: 'Room ID',
@@ -70,6 +73,9 @@ export const translations = {
         roomName: 'Nom de la salle',
         or: 'ou',
         start: 'Commencer',
+        cancel: 'Annuler',
+        join: 'Rejoindre',
+        joining: 'Connexion...',
       },
       room: {
         roomId: 'ID de la salle',

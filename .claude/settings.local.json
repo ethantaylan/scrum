@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add Netlify redirects and fix shared room link routing\n\n- Add _redirects file for SPA routing on Netlify\n- Show join modal when users click shared room links instead of redirecting to home\n- Add nickname prompt for users joining via shared link\n- Update translations with cancel, join, and joining keys\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
