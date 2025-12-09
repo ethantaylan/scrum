@@ -113,7 +113,7 @@ export default function Room() {
 
   const startRevealCountdown = useCallback(() => {
     if (!currentRoom || currentRoom.isRevealed || revealCountdown !== null) return;
-    setRevealCountdown(3);
+    setRevealCountdown(2);
   }, [currentRoom, revealCountdown]);
 
   const votedCount = voters.filter((p) => p.hasVoted).length;
@@ -1030,13 +1030,13 @@ export default function Room() {
                 <div className="flex gap-2 w-full sm:w-auto">
                   {!currentRoom.isRevealed &&
                     !currentParticipant.isSpectator &&
-                    totalVoters > 0 && (
+                    totalVoters > 0 &&
+                    !isRevealingSoon && (
                       <Button
                         variant="primary"
                         onClick={startRevealCountdown}
                         fullWidth
                         className="sm:w-auto"
-                        disabled={isRevealingSoon}
                       >
                         {t("room.reveal")}
                       </Button>
