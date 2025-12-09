@@ -1,48 +1,23 @@
-import { useEffect, useRef } from 'react';
 import { supabaseService } from '../services/supabase.service';
-import { useRoomStore } from '../stores/room.store';
-import type { VoteValue } from '../types';
 
 export function useSupabase() {
-  const { currentRoom, setRoom } = useRoomStore();
-  const channelRef = useRef<any>(null);
-
-  useEffect(() => {
-    // Subscribe to room changes if we have a current room
-    if (currentRoom?.id) {
-      channelRef.current = supabaseService.subscribeToRoom(currentRoom.id, (room) => {
-        setRoom(room);
-      });
-    }
-
-    return () => {
-      if (channelRef.current) {
-        supabaseService.unsubscribeFromRoom(channelRef.current);
-      }
-    };
-  }, [currentRoom?.id, setRoom]);
+  // Note: Room subscriptions are now handled in room.$id.tsx to avoid duplicate subscriptions
+  // This hook only provides service method bindings
 
   return {
-    createRoom: async (roomName: string, participantNickname: string) => {
-      return await supabaseService.createRoom(roomName, participantNickname);
-    },
-    joinRoom: async (roomId: string, participantNickname: string) => {
-      return await supabaseService.joinRoom(roomId, participantNickname);
-    },
-    leaveRoom: async (roomId: string, participantId: string) => {
-      await supabaseService.leaveRoom(roomId, participantId);
-    },
-    castVote: async (participantId: string, vote: VoteValue) => {
-      await supabaseService.castVote(participantId, vote);
-    },
-    revealVotes: async (roomId: string) => {
-      await supabaseService.revealVotes(roomId);
-    },
-    resetVotes: async (roomId: string) => {
-      await supabaseService.resetVotes(roomId);
-    },
-    updateParticipantStatus: async (participantId: string, isOnline: boolean) => {
-      await supabaseService.updateParticipantStatus(participantId, isOnline);
-    },
+    createRoom: supabaseService.createRoom.bind(supabaseService),
+    joinRoom: supabaseService.joinRoom.bind(supabaseService),
+    getRoomInfo: supabaseService.getRoomInfo.bind(supabaseService),
+    reconnectToRoom: supabaseService.reconnectToRoom.bind(supabaseService),
+    leaveRoom: supabaseService.leaveRoom.bind(supabaseService),
+    castVote: supabaseService.castVote.bind(supabaseService),
+    revealVotes: supabaseService.revealVotes.bind(supabaseService),
+    resetVotes: supabaseService.resetVotes.bind(supabaseService),
+    updateParticipantStatus: supabaseService.updateParticipantStatus.bind(supabaseService),
+    updateRoomName: supabaseService.updateRoomName.bind(supabaseService),
+    toggleAutoReveal: supabaseService.toggleAutoReveal.bind(supabaseService),
+    updateDeckType: supabaseService.updateDeckType.bind(supabaseService),
+    kickParticipant: supabaseService.kickParticipant.bind(supabaseService),
+    checkAllVoted: supabaseService.checkAllVoted.bind(supabaseService),
   };
 }

@@ -1,4 +1,28 @@
-export type VoteValue = '0' | '1' | '2' | '3' | '5' | '8' | '13' | '21' | '34' | '55' | '89' | '?' | '☕';
+export type VoteValue =
+  | "0"
+  | "1"
+  | "2"
+  | "3"
+  | "5"
+  | "8"
+  | "13"
+  | "21"
+  | "?"
+  | "☕"
+  | "XS"
+  | "S"
+  | "M"
+  | "L"
+  | "XL"
+  | "XXL"
+  | "0.5h"
+  | "1h"
+  | "2h"
+  | "4h"
+  | "8h"
+  | "16h";
+
+export type DeckType = "fibonacci" | "tshirt" | "hours";
 
 export interface Participant {
   id: string;
@@ -6,6 +30,8 @@ export interface Participant {
   hasVoted: boolean;
   vote: VoteValue | null;
   isOnline: boolean;
+  isSpectator: boolean;
+  avatar: string;
 }
 
 export interface Room {
@@ -14,6 +40,10 @@ export interface Room {
   participants: Participant[];
   isRevealed: boolean;
   createdAt: string;
+  creatorId: string | null;
+  deckType: DeckType;
+  password: string | null;
+  autoReveal: boolean;
 }
 
 export interface Vote {
@@ -29,16 +59,19 @@ export interface RoomState {
   setParticipant: (participant: Participant) => void;
   addParticipant: (participant: Participant) => void;
   removeParticipant: (participantId: string) => void;
-  updateParticipant: (participantId: string, updates: Partial<Participant>) => void;
+  updateParticipant: (
+    participantId: string,
+    updates: Partial<Participant>
+  ) => void;
   castVote: (participantId: string, vote: VoteValue) => void;
   revealVotes: () => void;
   resetVotes: () => void;
   leaveRoom: () => void;
 }
 
-export type Theme = 'light' | 'dark';
+export type Theme = "light" | "dark";
 
-export type Language = 'en' | 'fr';
+export type Language = "en" | "fr";
 
 export interface ThemeState {
   theme: Theme;

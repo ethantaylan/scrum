@@ -16,3 +16,70 @@ body {
   @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100;
   height: 100%;
 }
+
+button {
+  cursor: pointer;
+}
+
+/* Vote card flip effect */
+.flip-container {
+  perspective: 1200px;
+  width: 56px;
+  height: 80px;
+}
+
+.flip-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+}
+
+.flip-card.is-revealed {
+  transform: rotateY(180deg);
+}
+
+.flip-card .card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  backface-visibility: hidden;
+  box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.35);
+}
+
+.flip-card .card-back {
+  transform: rotateY(180deg);
+}
+
+/* Confetti */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 60;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10%;
+  width: 10px;
+  height: 16px;
+  border-radius: 3px;
+  opacity: 0.9;
+  animation: confetti-fall 1.2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  100% {
+    transform: translate3d(0, 110vh, 0) rotate(360deg);
+    opacity: 0;
+  }
+}

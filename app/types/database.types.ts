@@ -14,6 +14,10 @@ export interface Database {
           id: string
           name: string
           is_revealed: boolean
+          creator_id: string | null
+          deck_type: 'fibonacci' | 'tshirt' | 'hours'
+          password: string | null
+          auto_reveal: boolean
           created_at: string
           updated_at: string
         }
@@ -21,6 +25,10 @@ export interface Database {
           id?: string
           name: string
           is_revealed?: boolean
+          creator_id?: string | null
+          deck_type?: 'fibonacci' | 'tshirt' | 'hours'
+          password?: string | null
+          auto_reveal?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -28,6 +36,10 @@ export interface Database {
           id?: string
           name?: string
           is_revealed?: boolean
+          creator_id?: string | null
+          deck_type?: 'fibonacci' | 'tshirt' | 'hours'
+          password?: string | null
+          auto_reveal?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -40,6 +52,8 @@ export interface Database {
           vote: string | null
           has_voted: boolean
           is_online: boolean
+          is_spectator: boolean
+          avatar: string
           created_at: string
           updated_at: string
         }
@@ -50,6 +64,8 @@ export interface Database {
           vote?: string | null
           has_voted?: boolean
           is_online?: boolean
+          is_spectator?: boolean
+          avatar?: string
           created_at?: string
           updated_at?: string
         }
@@ -60,6 +76,8 @@ export interface Database {
           vote?: string | null
           has_voted?: boolean
           is_online?: boolean
+          is_spectator?: boolean
+          avatar?: string
           created_at?: string
           updated_at?: string
         }

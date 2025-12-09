@@ -21,7 +21,7 @@ export function LanguageToggle() {
       className="px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-medium text-gray-700 dark:text-gray-300"
       aria-label="Toggle language"
     >
-      {language === 'en' ? 'FR' : 'EN'}
+      {language === 'en' ? 'EN' : 'FR'}
     </button>
   );
 }
