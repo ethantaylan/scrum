@@ -215,6 +215,19 @@ class SupabaseService {
     if (error) throw error;
   }
 
+  async updateParticipantProfile(participantId: string, updates: { nickname?: string; avatar?: string }): Promise<void> {
+    const updateData: Record<string, unknown> = {};
+    if (updates.nickname !== undefined) updateData.nickname = updates.nickname;
+    if (updates.avatar !== undefined) updateData.avatar = updates.avatar;
+
+    const { error } = await supabase
+      .from('participants')
+      .update(updateData)
+      .eq('id', participantId);
+
+    if (error) throw error;
+  }
+
   async getRoomWithParticipants(roomId: string): Promise<Room> {
     const { data: roomData, error: roomError } = await supabase
       .from('rooms')
