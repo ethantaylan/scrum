@@ -7,7 +7,9 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add Netlify redirects and fix shared room link routing\n\n- Add _redirects file for SPA routing on Netlify\n- Show join modal when users click shared room links instead of redirecting to home\n- Add nickname prompt for users joining via shared link\n- Update translations with cancel, join, and joining keys\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(npm run typecheck:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add profile customization, minimalist participant cards, and voting recap\n\n- Add avatar selector to join room modal for initial profile setup\n- Add profile edit functionality allowing users to change avatar and nickname in-room\n- Create ProfileEditModal component with clean, consistent design\n- Add updateParticipantProfile method to Supabase service\n\n- Redesign participant cards with minimalist, modern aesthetic\n- Replace bulky Card components with flat, compact design\n- Add visual vote states: pulsing dot (waiting), checkmark (voted), gradient badge (revealed)\n- Implement hover-only action buttons for cleaner interface\n- Add online status indicator as small green dot with ring\n- Reduce spacing and padding for more efficient use of space\n- Update participants sidebar header with uppercase label and count badge\n\n- Add comprehensive voting results recap section when votes are revealed\n- Display all votes in clean grid layout (1 col mobile, 2 cols desktop)\n- Sort votes from highest to lowest for easy consensus identification\n- Show avatar, nickname, and vote value for each participant\n- Filter out spectators and non-voters automatically\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []

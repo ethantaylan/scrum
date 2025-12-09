@@ -49,6 +49,7 @@ export const translations = {
         selectCard: 'Select your card',
         hasVoted: 'has voted',
         reveal: 'Reveal Votes',
+        revealCountdown: 'Revealing in {{seconds}}...',
         newRound: 'New Round',
         leave: 'Leave Room',
         loading: 'Loading...',
@@ -164,6 +165,7 @@ export const translations = {
         selectCard: 'Sélectionnez votre carte',
         hasVoted: 'a voté',
         reveal: 'Révéler les votes',
+        revealCountdown: 'Révélation dans {{seconds}}...',
         newRound: 'Nouveau tour',
         leave: 'Quitter la salle',
         loading: 'Chargement...',
@@ -230,5 +232,4 @@ export const translations = {
     },
   },
 };
-
 

@@ -82,7 +82,7 @@ export function ProfileEditModal({
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
               variant="ghost"
-              size="lg"
+              size="md"
               fullWidth
               onClick={onCancel}
               disabled={isSaving}
@@ -91,7 +91,7 @@ export function ProfileEditModal({
             </Button>
             <Button
               variant="primary"
-              size="lg"
+              size="md"
               fullWidth
               onClick={handleSave}
               disabled={!nickname.trim() || isSaving}

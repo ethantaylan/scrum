@@ -78,13 +78,6 @@ export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRem
         </div>
       </div>
 
-      {/* Vote indicator */}
-      {!participant.isSpectator && (
-        <div className="shrink-0">
-          {getVoteDisplay()}
-        </div>
-      )}
-
       {/* Action buttons */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {isCurrentUser && onEdit && (
@@ -110,6 +103,13 @@ export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRem
           </button>
         )}
       </div>
+
+      {/* Vote indicator */}
+      {!participant.isSpectator && (
+        <div className="shrink-0">
+          {getVoteDisplay()}
+        </div>
+      )}
     </div>
   );
 }

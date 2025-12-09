@@ -14,6 +14,7 @@ export function useSupabase() {
     revealVotes: supabaseService.revealVotes.bind(supabaseService),
     resetVotes: supabaseService.resetVotes.bind(supabaseService),
     updateParticipantStatus: supabaseService.updateParticipantStatus.bind(supabaseService),
+    updateParticipantProfile: supabaseService.updateParticipantProfile.bind(supabaseService),
     updateRoomName: supabaseService.updateRoomName.bind(supabaseService),
     toggleAutoReveal: supabaseService.toggleAutoReveal.bind(supabaseService),
     updateDeckType: supabaseService.updateDeckType.bind(supabaseService),

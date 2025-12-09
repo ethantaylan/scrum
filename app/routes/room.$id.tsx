@@ -58,6 +58,7 @@ export default function Room() {
   const [confettiPlayed, setConfettiPlayed] = useState(false);
   const [autoRevealTriggered, setAutoRevealTriggered] = useState(false);
   const [showEveryoneVoted, setShowEveryoneVoted] = useState(false);
+  const [revealCountdown, setRevealCountdown] = useState<number | null>(null);
   const [isTogglingAutoReveal, setIsTogglingAutoReveal] = useState(false);
   const [isUpdatingDeck, setIsUpdatingDeck] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -110,10 +111,35 @@ export default function Room() {
     }
   }, [currentRoom, setRoom, supabase]);
 
+  const startRevealCountdown = useCallback(() => {
+    if (!currentRoom || currentRoom.isRevealed || revealCountdown !== null) return;
+    setRevealCountdown(3);
+  }, [currentRoom, revealCountdown]);
+
   const votedCount = voters.filter((p) => p.hasVoted).length;
   const totalVoters = voters.length;
 
   const allVoted = voters.length > 0 && voters.every((p) => p.hasVoted);
+  const isRevealingSoon = revealCountdown !== null;
+
+  useEffect(() => {
+    if (revealCountdown === null) return;
+
+    if (revealCountdown === 0) {
+      handleReveal();
+      setRevealCountdown(null);
+      return;
+    }
+
+    const timer = setTimeout(
+      () =>
+        setRevealCountdown((prev) =>
+          prev !== null ? Math.max(prev - 1, 0) : prev
+        ),
+      1000
+    );
+    return () => clearTimeout(timer);
+  }, [handleReveal, revealCountdown]);
 
   // Pre-fill nickname with last used nickname
   useEffect(() => {
@@ -212,21 +238,25 @@ export default function Room() {
     if (currentRoom.isRevealed) {
       setShowEveryoneVoted(false);
       setAutoRevealTriggered(false);
+      setRevealCountdown(null);
       return;
     }
 
     if (allVoted) {
       setShowEveryoneVoted(true);
 
-      if (currentRoom.autoReveal && !autoRevealTriggered) {
+      if (currentRoom.autoReveal && !autoRevealTriggered && revealCountdown === null) {
         setAutoRevealTriggered(true);
-        handleReveal();
+        startRevealCountdown();
       }
     } else {
       setShowEveryoneVoted(false);
-      setAutoRevealTriggered(false);
+      if (autoRevealTriggered) {
+        setRevealCountdown(null);
+        setAutoRevealTriggered(false);
+      }
     }
-  }, [allVoted, autoRevealTriggered, currentRoom, handleReveal]);
+  }, [allVoted, autoRevealTriggered, currentRoom, revealCountdown, startRevealCountdown]);
 
   const handleVote = async (vote: VoteValue) => {
     if (!currentRoom || !currentParticipant || currentRoom.isRevealed) return;
@@ -250,6 +280,7 @@ export default function Room() {
     setSelectedVote(null);
     setShowEveryoneVoted(false);
     setAutoRevealTriggered(false);
+    setRevealCountdown(null);
     setConfettiPlayed(false);
     setRoom({
       ...currentRoom,
@@ -387,16 +418,24 @@ export default function Room() {
   }, [currentRoom, currentParticipant, supabase]);
 
   const handleUpdateProfile = useCallback(async (nickname: string, avatar: string) => {
-    if (!currentParticipant) return;
+    if (!currentParticipant || !currentRoom) return;
     try {
       await supabase.updateParticipantProfile(currentParticipant.id, { nickname, avatar });
-      setParticipant({ ...currentParticipant, nickname, avatar });
+
+      const updatedParticipant = { ...currentParticipant, nickname, avatar };
+      setParticipant(updatedParticipant);
+      setRoom({
+        ...currentRoom,
+        participants: currentRoom.participants.map((p) =>
+          p.id === updatedParticipant.id ? { ...p, nickname, avatar } : p
+        ),
+      });
       setShowProfileEdit(false);
     } catch (error) {
       console.error("Failed to update profile:", error);
       throw error;
     }
-  }, [currentParticipant, supabase, setParticipant]);
+  }, [currentParticipant, currentRoom, supabase, setParticipant, setRoom]);
 
   const handleJoinFromLink = async () => {
     if (!nickname.trim()) {
@@ -992,7 +1031,13 @@ export default function Room() {
                   {!currentRoom.isRevealed &&
                     !currentParticipant.isSpectator &&
                     totalVoters > 0 && (
-                      <Button variant="primary" onClick={handleReveal} fullWidth className="sm:w-auto">
+                      <Button
+                        variant="primary"
+                        onClick={startRevealCountdown}
+                        fullWidth
+                        className="sm:w-auto"
+                        disabled={isRevealingSoon}
+                      >
                         {t("room.reveal")}
                       </Button>
                     )}
@@ -1002,6 +1047,16 @@ export default function Room() {
                     </Button>
                   )}
                 </div>
+                {isRevealingSoon && !currentRoom.isRevealed && (
+                  <div className="flex justify-end w-full sm:w-auto">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-100 shadow-sm animate-pulse">
+                      <span className="text-lg">⏳</span>
+                      <span className="text-sm font-semibold">
+                        {t("room.revealCountdown", { seconds: revealCountdown ?? 0 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Voting Progress */}
