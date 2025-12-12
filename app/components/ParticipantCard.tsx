@@ -50,7 +50,7 @@ export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRem
     >
       {/* Avatar with online indicator */}
       <div className="relative shrink-0">
-        <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-xl">
+        <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-900 flex items-center justify-center text-xl">
           {participant.avatar || '👤'}
         </div>
         {participant.isOnline && (

@@ -1,5 +1,3 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/home";
 import { Button } from "../components/ui/Button";
@@ -8,14 +6,7 @@ import { Card } from "../components/ui/Card";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { LanguageToggle } from "../components/ui/LanguageToggle";
 import { CompactAvatarSelector } from "../components/ui/CompactAvatarSelector";
-import { useSupabase } from "../hooks/useSupabase";
-import {
-  useRoomStore,
-  getLastNickname,
-  getLastAvatar,
-} from "../stores/room.store";
-import { EMOJI_AVATARS } from "../constants/decks";
-import type { DeckType } from "../types";
+import { useHomeController } from "../features/home/useHomeController";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -26,153 +17,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const supabase = useSupabase();
-  const { setRoom, setParticipant } = useRoomStore();
-  const DEFAULT_AVATAR = EMOJI_AVATARS[0];
-  const [activeTab, setActiveTab] = useState<"create" | "join">("create");
-  const [nickname, setNickname] = useState("");
-  const [roomId, setRoomId] = useState("");
-  const [roomName, setRoomName] = useState("");
-  const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
-  const [deckType] = useState<DeckType>("fibonacci");
-  const [createPassword] = useState("");
-  const [joinPassword, setJoinPassword] = useState("");
-  const autoReveal = false;
-  const [isSpectator, setIsSpectator] = useState(false);
-  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
-  const [pendingRoomInfo, setPendingRoomInfo] = useState<{
-    id: string;
-    name: string;
-    hasPassword: boolean;
-  } | null>(null);
-  const [errors, setErrors] = useState<{
-    nickname?: string;
-    roomId?: string;
-    roomName?: string;
-    password?: string;
-  }>({});
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Pre-fill nickname + avatar from localStorage
-  useEffect(() => {
-    const lastNickname = getLastNickname();
-    const lastAvatar = getLastAvatar();
-
-    if (lastNickname) {
-      setNickname(lastNickname);
-    }
-
-    if (lastAvatar) {
-      setAvatar(lastAvatar);
-    }
-  }, []);
-
-  const handleAvatarSelect = (value: string) => {
-    setAvatar(value);
-    try {
-      localStorage.setItem("scrum-last-avatar", value);
-    } catch (err) {
-      console.warn("Unable to persist avatar", err);
-    }
-  };
-
-  const handleCreateRoom = async () => {
-    // Validate nickname
-    if (!nickname.trim()) {
-      setErrors((prev) => ({
-        ...prev,
-        nickname: t("errors.nicknameRequired"),
-      }));
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const finalRoomName = roomName.trim() || `${nickname}'s Room`;
-      const { room, participant } = await supabase.createRoom({
-        roomName: finalRoomName,
-        participantNickname: nickname.trim(),
-        avatar,
-        deckType,
-        password: createPassword.trim() || undefined,
-        autoReveal,
-      });
-
-      setRoom(room);
-      setParticipant(participant);
-      navigate(`/room/${room.id}`);
-    } catch (error) {
-      console.error("Failed to create room:", error);
-      setErrors((prev) => ({ ...prev, roomName: "Failed to create room" }));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleJoinRoom = async (passwordOverride?: string) => {
-    // Validate nickname
-    if (!nickname.trim()) {
-      setErrors((prev) => ({
-        ...prev,
-        nickname: t("errors.nicknameRequired"),
-      }));
-      return;
-    }
-
-    // Validate room ID
-    if (!roomId.trim()) {
-      setErrors((prev) => ({ ...prev, roomId: t("errors.roomIdRequired") }));
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      setErrors((prev) => ({
-        ...prev,
-        roomId: undefined,
-        password: undefined,
-      }));
-      const trimmedId = roomId.trim();
-
-      const roomInfo = await supabase.getRoomInfo(trimmedId);
-      const finalPassword = passwordOverride ?? joinPassword.trim();
-
-      if (roomInfo.hasPassword && !finalPassword) {
-        setPendingRoomInfo(roomInfo);
-        setShowPasswordPrompt(true);
-        setIsLoading(false);
-        return;
-      }
-
-      const { room, participant } = await supabase.joinRoom({
-        roomId: trimmedId,
-        participantNickname: nickname.trim(),
-        avatar,
-        password: roomInfo.hasPassword ? finalPassword : undefined,
-        isSpectator,
-      });
-
-      setRoom(room);
-      setParticipant(participant);
-      setJoinPassword("");
-      setShowPasswordPrompt(false);
-      setPendingRoomInfo(null);
-      navigate(`/room/${room.id}`);
-    } catch (error: any) {
-      console.error("Failed to join room:", error);
-      if (error.message === "Invalid password") {
-        setErrors((prev) => ({
-          ...prev,
-          password: t("errors.invalidPassword"),
-        }));
-      } else {
-        setErrors((prev) => ({ ...prev, roomId: t("errors.roomNotFound") }));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { state, modals, flags, errors, actions } = useHomeController(t);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors">
@@ -196,7 +41,7 @@ export default function Home() {
               </p>
 
               {/* Features - Compact Version */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto lg:mx-0">
+              <div className="grid grid-cols-3 sm:grid-cols-3 gap-4 max-w-lg mx-auto lg:mx-0">
                 <div className="flex items-center gap-3 lg:flex-col lg:items-start">
                   <div className="text-2xl">⚡</div>
                   <div>
@@ -245,11 +90,11 @@ export default function Home() {
               <div className="flex border-b border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => {
-                    setActiveTab("create");
-                    setErrors({});
+                    actions.setActiveTab("create");
+                    actions.resetErrors();
                   }}
                   className={`flex-1 px-6 py-4 text-center font-semibold transition-all ${
-                    activeTab === "create"
+                    state.activeTab === "create"
                       ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20"
                       : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
@@ -258,11 +103,11 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => {
-                    setActiveTab("join");
-                    setErrors({});
+                    actions.setActiveTab("join");
+                    actions.resetErrors();
                   }}
                   className={`flex-1 px-6 py-4 text-center font-semibold transition-all ${
-                    activeTab === "join"
+                    state.activeTab === "join"
                       ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20"
                       : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
@@ -276,27 +121,27 @@ export default function Home() {
                 {/* Essential Fields - Always Visible */}
                 <div className="flex items-end gap-4 mb-6">
                   <CompactAvatarSelector
-                    selectedAvatar={avatar}
-                    onSelect={handleAvatarSelect}
+                    selectedAvatar={state.avatar}
+                    onSelect={actions.handleAvatarSelect}
                   />
                   <div className="flex-1">
                     <Input
                       label={t("home.enterNickname")}
-                      value={nickname}
+                      value={state.nickname}
                       onChange={(e) => {
-                        setNickname(e.target.value);
-                        setErrors((prev) => ({ ...prev, nickname: undefined }));
+                        actions.setNickname(e.target.value);
+                        actions.clearError("nickname");
                       }}
                       onKeyPress={(e) => {
                         if (
                           e.key === "Enter" &&
-                          nickname.trim() &&
-                          !isLoading
+                          state.nickname.trim() &&
+                          !flags.isLoading
                         ) {
-                          if (activeTab === "create") {
-                            handleCreateRoom();
-                          } else if (roomId.trim()) {
-                            handleJoinRoom();
+                          if (state.activeTab === "create") {
+                            actions.handleCreateRoom();
+                          } else if (state.roomId.trim()) {
+                            actions.handleJoinRoom();
                           }
                         }
                       }}
@@ -309,15 +154,15 @@ export default function Home() {
                 </div>
 
                 {/* Create Room Tab */}
-                {activeTab === "create" && (
+                {state.activeTab === "create" && (
                   <div className="space-y-6">
                     <Button
                       variant="primary"
                       fullWidth
-                      onClick={handleCreateRoom}
-                      disabled={!nickname.trim() || isLoading}
+                      onClick={actions.handleCreateRoom}
+                      disabled={!state.nickname.trim() || flags.isLoading}
                     >
-                      {isLoading ? (
+                      {flags.isLoading ? (
                         <span className="flex items-center justify-center gap-2">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                           {t("home.creating")}
@@ -330,14 +175,14 @@ export default function Home() {
                 )}
 
                 {/* Join Room Tab */}
-                {activeTab === "join" && (
+                {state.activeTab === "join" && (
                   <div className="space-y-6">
                     <Input
                       label={t("home.enterRoomId")}
-                      value={roomId}
+                      value={state.roomId}
                       onChange={(e) => {
-                        setRoomId(e.target.value);
-                        setErrors((prev) => ({ ...prev, roomId: undefined }));
+                        actions.setRoomId(e.target.value);
+                        actions.clearError("roomId");
                       }}
                       error={errors.roomId}
                       placeholder="abc-123-xyz"
@@ -346,10 +191,10 @@ export default function Home() {
                     <Button
                       variant="primary"
                       fullWidth
-                      onClick={() => handleJoinRoom()}
-                      disabled={!nickname.trim() || !roomId.trim() || isLoading}
+                      onClick={() => actions.handleJoinRoom()}
+                      disabled={!state.nickname.trim() || !state.roomId.trim() || flags.isLoading}
                     >
-                      {isLoading ? (
+                      {flags.isLoading ? (
                         <span className="flex items-center justify-center gap-2">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                           {t("home.joining")}
@@ -366,26 +211,102 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Password Prompt Modal */}
-      {showPasswordPrompt && pendingRoomInfo && (
+      {/* Active Session Prompt Modal */}
+      {modals.showSessionPrompt && modals.activeSession && (
         <>
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-            onClick={() => {
-              setShowPasswordPrompt(false);
-              setJoinPassword("");
-              setErrors((prev) => ({ ...prev, password: undefined }));
-            }}
+            onClick={() => actions.setShowSessionPrompt(false)}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <Card variant="elevated" className="w-full max-w-md relative p-6">
               <button
                 type="button"
-                onClick={() => {
-                  setShowPasswordPrompt(false);
-                  setJoinPassword("");
-                  setErrors((prev) => ({ ...prev, password: undefined }));
-                }}
+                onClick={() => actions.setShowSessionPrompt(false)}
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label={t("home.cancel")}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+
+              <div className="flex items-start gap-3 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {t("home.activeSessionTitle")}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {t("home.activeSessionSubtitle", {
+                      roomName: modals.activeSession.roomName,
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => {
+                    actions.setShowSessionPrompt(false);
+                    actions.setActiveSession(null);
+                  }}
+                  disabled={flags.isLoading}
+                >
+                  {t("home.stayHere")}
+                </Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={actions.handleResumeSession}
+                  disabled={flags.isLoading}
+                >
+                  {flags.isLoading ? t("home.joining") : t("home.rejoinRoom")}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* Password Prompt Modal */}
+      {modals.showPasswordPrompt && modals.pendingRoomInfo && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            onClick={actions.handleDismissPasswordPrompt}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <Card variant="elevated" className="w-full max-w-md relative p-6">
+              <button
+                type="button"
+                onClick={actions.handleDismissPasswordPrompt}
                 className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                 aria-label={t("home.cancel")}
               >
@@ -409,7 +330,7 @@ export default function Home() {
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {t("home.passwordModalSubtitle", {
-                  roomName: pendingRoomInfo.name,
+                  roomName: modals.pendingRoomInfo.name,
                 })}
               </p>
 
@@ -417,14 +338,14 @@ export default function Home() {
                 <Input
                   label={t("home.password")}
                   type="password"
-                  value={joinPassword}
+                  value={modals.joinPassword}
                   onChange={(e) => {
-                    setJoinPassword(e.target.value);
-                    setErrors((prev) => ({ ...prev, password: undefined }));
+                    actions.setJoinPassword(e.target.value);
+                    actions.clearError("password");
                   }}
                   onKeyPress={(e) => {
                     if (e.key === "Enter") {
-                      handleJoinRoom(joinPassword);
+                      actions.handleJoinRoom(modals.joinPassword);
                     }
                   }}
                   error={errors.password}
@@ -436,21 +357,17 @@ export default function Home() {
                 <div className="flex justify-end gap-3">
                   <Button
                     variant="ghost"
-                    onClick={() => {
-                      setShowPasswordPrompt(false);
-                      setJoinPassword("");
-                      setErrors((prev) => ({ ...prev, password: undefined }));
-                    }}
-                    disabled={isLoading}
+                    onClick={actions.handleDismissPasswordPrompt}
+                    disabled={flags.isLoading}
                   >
                     {t("home.cancel")}
                   </Button>
                   <Button
                     variant="primary"
-                    onClick={() => handleJoinRoom(joinPassword)}
-                    disabled={!joinPassword.trim() || isLoading}
+                    onClick={() => actions.handleJoinRoom(modals.joinPassword)}
+                    disabled={!modals.joinPassword.trim() || flags.isLoading}
                   >
-                    {isLoading ? t("home.joining") : t("home.submitPassword")}
+                    {flags.isLoading ? t("home.joining") : t("home.submitPassword")}
                   </Button>
                 </div>
               </div>
@@ -458,6 +375,21 @@ export default function Home() {
           </div>
         </>
       )}
+
+      {/* Footer */}
+      <footer className="absolute bottom-0 w-full py-4 text-center text-sm text-gray-600 dark:text-gray-400">
+        <p>
+          {t("home.madeBy")}{" "}
+          <a
+            href="https://github.com/ethantaylan"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+          >
+            ethantaylan
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }

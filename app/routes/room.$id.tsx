@@ -5,22 +5,15 @@ import { VotingCard } from "../components/VotingCard";
 import { ParticipantCard } from "../components/ParticipantCard";
 import { CompactAvatarSelector } from "../components/ui/CompactAvatarSelector";
 import { ProfileEditModal } from "../components/ProfileEditModal";
-import { useSupabase } from "../hooks/useSupabase";
-import {
-  useRoomStore,
-  getStoredSession,
-  getLastNickname,
-  getLastAvatar,
-} from "../stores/room.store";
-import { DECKS, DECK_OPTIONS, EMOJI_AVATARS } from "../constants/decks";
-import type { VoteValue, DeckType } from "../types";
-import { supabaseService } from "../services/supabase.service";
-import { useNavigate, useParams } from "react-router";
+import { DECK_OPTIONS } from "../constants/decks";
+import type { DeckType } from "../types";
+import { parseVoteToNumber } from "../lib/votes";
+import { useParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Route } from "../+types/root";
 import { Card } from "~/components/ui/Card";
 import { Button } from "~/components/ui/Button";
+import { useRoomController } from "../features/room/useRoomController";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -31,597 +24,66 @@ export function meta({ params }: Route.MetaArgs) {
 
 export default function Room() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { t } = useTranslation();
-  const supabase = useSupabase();
+  const navigate = useNavigate();
   const {
     currentRoom,
     currentParticipant,
-    setRoom,
-    setParticipant,
-    leaveRoom: clearRoom,
-  } = useRoomStore();
-  const [selectedVote, setSelectedVote] = useState<VoteValue | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [nickname, setNickname] = useState("");
-  const [joinModalPassword, setJoinModalPassword] = useState("");
-  const [needsPassword, setNeedsPassword] = useState(false);
-  const [joinRoomName, setJoinRoomName] = useState("");
-  const [isJoining, setIsJoining] = useState(false);
-  const [joinError, setJoinError] = useState("");
-  const [isRecoveringSession, setIsRecoveringSession] = useState(true);
-  const [joinAsSpectator, setJoinAsSpectator] = useState(false);
-  const defaultAvatar =
-    (typeof window !== "undefined" && getLastAvatar()) || EMOJI_AVATARS[0];
-  const [joinModalAvatar, setJoinModalAvatar] = useState(defaultAvatar);
-  const [confettiPlayed, setConfettiPlayed] = useState(false);
-  const [autoRevealTriggered, setAutoRevealTriggered] = useState(false);
-  const [showEveryoneVoted, setShowEveryoneVoted] = useState(false);
-  const [revealCountdown, setRevealCountdown] = useState<number | null>(null);
-  const [isTogglingAutoReveal, setIsTogglingAutoReveal] = useState(false);
-  const [isUpdatingDeck, setIsUpdatingDeck] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [newRoomName, setNewRoomName] = useState("");
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [showProfileEdit, setShowProfileEdit] = useState(false);
-  const settingsRef = useRef<HTMLDivElement | null>(null);
-  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+    selectedVote,
+    copied,
+    showJoinModal,
+    nickname,
+    joinModalPassword,
+    needsPassword,
+    isJoining,
+    joinError,
+    isRecoveringSession,
+    joinAsSpectator,
+    joinModalAvatar,
+    showEveryoneVoted,
+    revealCountdown,
+    isTogglingAutoReveal,
+    isUpdatingDeck,
+    showSettingsMenu,
+    showMobileMenu,
+    newRoomName,
+    isRenaming,
+    showProfileEdit,
+    numericVoteOptions,
+    specialVoteOptions,
+    voters,
+    averageVote,
+    votedCount,
+    totalVoters,
+    isRevealingSoon,
+    canToggleAutoReveal,
+    canChangeDeck,
+    canRename,
+    canRemoveParticipants,
+    settingsRef,
+    mobileMenuRef,
+    handleReset,
+    handleLeave,
+    handleCopyLink,
+    handleToggleAutoReveal,
+    handleDeckChange,
+    handleRenameRoom,
+    handleRemoveParticipant,
+    handleUpdateProfile,
+    handleJoinFromLink,
+    startRevealCountdown,
+    handleVote,
+    setNickname,
+    setJoinModalPassword,
+    setJoinError,
+    setJoinAsSpectator,
+    setJoinModalAvatar,
+    setShowProfileEdit,
+    setShowSettingsMenu,
+    setShowMobileMenu,
+    setNewRoomName,
+  } = useRoomController({ roomId: id, t });
 
-  const deckConfig = useMemo(() => {
-    if (!currentRoom) return DECKS.fibonacci;
-    return DECKS[currentRoom.deckType] || DECKS.fibonacci;
-  }, [currentRoom]);
-
-  const numericVoteOptions = deckConfig.numeric;
-  const specialVoteOptions = deckConfig.special;
-  const voters = useMemo(
-    () =>
-      currentRoom ? currentRoom.participants.filter((p) => !p.isSpectator) : [],
-    [currentRoom]
-  );
-  const parseVoteToNumber = (vote: VoteValue | null) => {
-    if (!vote) return null;
-    const cleaned =
-      typeof vote === "string" && vote.endsWith("h") ? vote.slice(0, -1) : vote;
-    const numeric = Number.parseFloat(cleaned);
-    return Number.isNaN(numeric) ? null : numeric;
-  };
-  const averageVote = useMemo(() => {
-    if (!currentRoom?.isRevealed) return null;
-
-    const numericVotes = voters
-      .filter((p) => p.hasVoted && p.vote !== null)
-      .map((p) => parseVoteToNumber(p.vote))
-      .filter((v): v is number => v !== null);
-
-    if (!numericVotes.length) return null;
-    const sum = numericVotes.reduce((a, b) => a + b, 0);
-    return Math.round(sum / numericVotes.length);
-  }, [currentRoom?.isRevealed, voters]);
-
-  const handleReveal = useCallback(async () => {
-    if (!currentRoom) return;
-    setRoom({ ...currentRoom, isRevealed: true });
-    try {
-      await supabase.revealVotes(currentRoom.id);
-    } catch (error) {
-      console.error("Failed to reveal votes:", error);
-    }
-  }, [currentRoom, setRoom, supabase]);
-
-  const startRevealCountdown = useCallback(() => {
-    if (!currentRoom || currentRoom.isRevealed || revealCountdown !== null) return;
-    setRevealCountdown(2);
-  }, [currentRoom, revealCountdown]);
-
-  const votedCount = voters.filter((p) => p.hasVoted).length;
-  const totalVoters = voters.length;
-
-  const allVoted = voters.length > 0 && voters.every((p) => p.hasVoted);
-  const isRevealingSoon = revealCountdown !== null;
-
-  useEffect(() => {
-    if (revealCountdown === null) return;
-
-    if (revealCountdown === 0) {
-      handleReveal();
-      setRevealCountdown(null);
-      return;
-    }
-
-    const timer = setTimeout(
-      () =>
-        setRevealCountdown((prev) =>
-          prev !== null ? Math.max(prev - 1, 0) : prev
-        ),
-      1000
-    );
-    return () => clearTimeout(timer);
-  }, [handleReveal, revealCountdown]);
-
-  // Pre-fill nickname with last used nickname
-  useEffect(() => {
-    const lastNickname = getLastNickname();
-    if (lastNickname) {
-      setNickname(lastNickname);
-    }
-  }, []);
-
-  // Attempt to recover session on mount
-  useEffect(() => {
-    const recoverSession = async () => {
-      const storedSession = getStoredSession();
-
-      // If we have a stored session and it matches the current room ID, try to reconnect
-      if (storedSession && storedSession.roomId === id) {
-        try {
-          // Try to reconnect to existing participant (doesn't create duplicate)
-          const result = await supabase.reconnectToRoom(
-            storedSession.roomId,
-            storedSession.participantId
-          );
-
-          if (result) {
-            // Successfully reconnected to existing participant
-            setRoom(result.room);
-            setParticipant(result.participant);
-            setShowJoinModal(false);
-          } else {
-            // Participant no longer exists (maybe kicked or room ended), show join modal
-            setShowJoinModal(true);
-          }
-        } catch (error) {
-          console.error("Failed to recover session:", error);
-          // Session recovery failed, show join modal
-          setShowJoinModal(true);
-        }
-      } else {
-        // No valid session, show join modal
-        setShowJoinModal(true);
-      }
-
-      setIsRecoveringSession(false);
-    };
-
-    // Only attempt recovery if not already in a room
-    if (!currentRoom || !currentParticipant) {
-      recoverSession();
-    } else {
-      setIsRecoveringSession(false);
-    }
-  }, [id, supabase, currentRoom, currentParticipant, setRoom, setParticipant]);
-
-  useEffect(() => {
-    const fetchRoomInfo = async () => {
-      if (!id || !showJoinModal) return;
-      try {
-        const info = await supabase.getRoomInfo(id);
-        setNeedsPassword(info.hasPassword);
-        setJoinRoomName(info.name);
-      } catch {
-        setNeedsPassword(false);
-      }
-    };
-
-    fetchRoomInfo();
-  }, [id, showJoinModal, supabase]);
-
-  // Update participant status when component mounts/unmounts (stable on id)
-  // Keep current user marked online (heartbeat) and mark offline on leave
-  useEffect(() => {
-    if (!currentParticipant?.id) return;
-
-    const goOnline = async () => {
-      try {
-        await supabase.updateParticipantStatus(currentParticipant.id, true);
-      } catch (err) {
-        console.warn("Unable to update status online", err);
-      }
-    };
-
-    goOnline();
-    const heartbeat = setInterval(goOnline, 15000);
-
-    return () => {
-      clearInterval(heartbeat);
-      supabase
-        .updateParticipantStatus(currentParticipant.id, false)
-        .catch(() => {});
-    };
-  }, [currentParticipant?.id]);
-
-  useEffect(() => {
-    if (!currentRoom) return;
-
-    if (currentRoom.isRevealed) {
-      setShowEveryoneVoted(false);
-      setAutoRevealTriggered(false);
-      setRevealCountdown(null);
-      return;
-    }
-
-    if (allVoted) {
-      setShowEveryoneVoted(true);
-
-      if (currentRoom.autoReveal && !autoRevealTriggered && revealCountdown === null) {
-        setAutoRevealTriggered(true);
-        startRevealCountdown();
-      }
-    } else {
-      setShowEveryoneVoted(false);
-      if (autoRevealTriggered) {
-        setRevealCountdown(null);
-        setAutoRevealTriggered(false);
-      }
-    }
-  }, [allVoted, autoRevealTriggered, currentRoom, revealCountdown, startRevealCountdown]);
-
-  const handleVote = async (vote: VoteValue) => {
-    if (!currentRoom || !currentParticipant || currentRoom.isRevealed) return;
-
-    setSelectedVote(vote);
-    setRoom({
-      ...currentRoom,
-      participants: currentRoom.participants.map((p) =>
-        p.id === currentParticipant.id ? { ...p, vote, hasVoted: true } : p
-      ),
-    });
-    try {
-      await supabase.castVote(currentParticipant.id, vote);
-    } catch (error) {
-      console.error("Failed to cast vote:", error);
-    }
-  };
-
-  const handleReset = useCallback(async () => {
-    if (!currentRoom) return;
-    setSelectedVote(null);
-    setShowEveryoneVoted(false);
-    setAutoRevealTriggered(false);
-    setRevealCountdown(null);
-    setConfettiPlayed(false);
-    setRoom({
-      ...currentRoom,
-      isRevealed: false,
-      participants: currentRoom.participants.map((p) => ({
-        ...p,
-        vote: null,
-        hasVoted: false,
-      })),
-    });
-    try {
-      await supabase.resetVotes(currentRoom.id);
-    } catch (error) {
-      console.error("Failed to reset votes:", error);
-    }
-  }, [currentRoom, setRoom, supabase]);
-
-  const handleLeave = async () => {
-    if (!currentRoom || !currentParticipant) return;
-    try {
-      await supabase.leaveRoom(currentRoom.id, currentParticipant.id);
-      clearRoom();
-      navigate("/");
-    } catch (error) {
-      console.error("Failed to leave room:", error);
-      clearRoom();
-      navigate("/");
-    }
-  };
-
-  const handleCopyLink = useCallback(async () => {
-    const roomIdToCopy = currentRoom?.id || id || "";
-    if (!roomIdToCopy) return;
-    try {
-      const fullUrl = `${window.location.origin}/room/${roomIdToCopy}`;
-      await navigator.clipboard.writeText(fullUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy room link:", err);
-    }
-  }, [currentRoom?.id, id]);
-
-  const triggerConfetti = useCallback(() => {
-    if (typeof document === "undefined") return;
-
-    const colors = ["#2563eb", "#f97316", "#10b981", "#eab308", "#ec4899"];
-    const container = document.createElement("div");
-    container.className = "confetti-layer";
-
-    for (let i = 0; i < 70; i += 1) {
-      const piece = document.createElement("span");
-      piece.className = "confetti-piece";
-      piece.style.backgroundColor = colors[i % colors.length];
-      piece.style.left = `${Math.random() * 100}%`;
-      piece.style.animationDuration = `${0.9 + Math.random() * 0.7}s`;
-      piece.style.animationDelay = `${Math.random() * 0.2}s`;
-      container.appendChild(piece);
-    }
-
-    document.body.appendChild(container);
-    setTimeout(() => container.remove(), 1600);
-  }, []);
-
-  const handleToggleAutoReveal = useCallback(async () => {
-    if (!currentRoom || !currentParticipant) return;
-    const previous = currentRoom.autoReveal;
-    const next = !previous;
-    setRoom({ ...currentRoom, autoReveal: next });
-    setIsTogglingAutoReveal(true);
-    try {
-      await supabase.toggleAutoReveal(
-        currentRoom.id,
-        next,
-        currentParticipant.id
-      );
-    } catch (error) {
-      console.error("Failed to toggle auto reveal:", error);
-      setRoom({ ...currentRoom, autoReveal: previous });
-    } finally {
-      setIsTogglingAutoReveal(false);
-    }
-  }, [currentParticipant, currentRoom, supabase]);
-
-  const handleDeckChange = useCallback(
-    async (deck: DeckType) => {
-      if (!currentRoom || !currentParticipant) return;
-      const previous = currentRoom.deckType;
-      setRoom({ ...currentRoom, deckType: deck });
-      setIsUpdatingDeck(true);
-      try {
-        await supabase.updateDeckType(
-          currentRoom.id,
-          deck,
-          currentParticipant.id
-        );
-      } catch (error) {
-        console.error("Failed to change deck type:", error);
-        setRoom({ ...currentRoom, deckType: previous });
-      } finally {
-        setIsUpdatingDeck(false);
-      }
-    },
-    [currentParticipant, currentRoom, supabase]
-  );
-
-  const handleRenameRoom = useCallback(async () => {
-    const trimmedName = newRoomName.trim();
-    if (!currentRoom || !currentParticipant || !trimmedName) return;
-    if (trimmedName === currentRoom.name) return;
-    const previous = currentRoom.name;
-    setRoom({ ...currentRoom, name: trimmedName });
-    setIsRenaming(true);
-    try {
-      await supabase.updateRoomName(
-        currentRoom.id,
-        trimmedName,
-        currentParticipant.id
-      );
-    } catch (error) {
-      console.error("Failed to rename room:", error);
-      setRoom({ ...currentRoom, name: previous });
-    } finally {
-      setIsRenaming(false);
-    }
-  }, [currentParticipant, currentRoom, newRoomName, supabase]);
-
-  const handleRemoveParticipant = useCallback(async (participantId: string) => {
-    if (!currentRoom || !currentParticipant) return;
-    try {
-      await supabase.kickParticipant(currentRoom.id, participantId, currentParticipant.id);
-    } catch (error) {
-      console.error("Failed to remove participant:", error);
-    }
-  }, [currentRoom, currentParticipant, supabase]);
-
-  const handleUpdateProfile = useCallback(async (nickname: string, avatar: string) => {
-    if (!currentParticipant || !currentRoom) return;
-    try {
-      await supabase.updateParticipantProfile(currentParticipant.id, { nickname, avatar });
-
-      const updatedParticipant = { ...currentParticipant, nickname, avatar };
-      setParticipant(updatedParticipant);
-      setRoom({
-        ...currentRoom,
-        participants: currentRoom.participants.map((p) =>
-          p.id === updatedParticipant.id ? { ...p, nickname, avatar } : p
-        ),
-      });
-      setShowProfileEdit(false);
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      throw error;
-    }
-  }, [currentParticipant, currentRoom, supabase, setParticipant, setRoom]);
-
-  const handleJoinFromLink = async () => {
-    if (!nickname.trim()) {
-      setJoinError(t("errors.nicknameRequired"));
-      return;
-    }
-
-    if (!id) {
-      navigate("/");
-      return;
-    }
-
-    setIsJoining(true);
-    setJoinError("");
-
-    try {
-      const finalPassword = needsPassword
-        ? joinModalPassword.trim()
-        : undefined;
-      if (needsPassword && !finalPassword) {
-        setJoinError(t("errors.passwordRequired"));
-        setIsJoining(false);
-        return;
-      }
-
-      const { room, participant } = await supabase.joinRoom({
-        roomId: id,
-        participantNickname: nickname.trim(),
-        avatar: joinModalAvatar,
-        password: finalPassword,
-        isSpectator: joinAsSpectator,
-      });
-      setRoom(room);
-      setParticipant(participant);
-      setShowJoinModal(false);
-      setJoinModalPassword("");
-    } catch (error) {
-      console.error("Failed to join room:", error);
-      if ((error as any).message === "Invalid password") {
-        setJoinError(t("errors.invalidPassword"));
-      } else {
-        setJoinError(t("errors.roomNotFound"));
-      }
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!currentRoom?.isRevealed) return;
-
-    const voters = currentRoom.participants.filter((p) => !p.isSpectator);
-    const allHaveVote =
-      voters.length > 0 &&
-      voters.every((p) => p.vote !== null && p.vote !== undefined);
-    const firstVote = allHaveVote ? voters[0].vote : null;
-    const allSame = allHaveVote && voters.every((p) => p.vote === firstVote);
-
-    if (allSame && !confettiPlayed) {
-      triggerConfetti();
-      setConfettiPlayed(true);
-    }
-  }, [confettiPlayed, currentRoom, triggerConfetti]);
-
-  useEffect(() => {
-    if (!currentRoom?.isRevealed) {
-      setConfettiPlayed(false);
-    }
-  }, [currentRoom?.isRevealed]);
-
-  useEffect(() => {
-    if (currentRoom?.name) {
-      setNewRoomName(currentRoom.name);
-    }
-  }, [currentRoom?.name]);
-
-  useEffect(() => {
-    if (!showSettingsMenu && !showMobileMenu) return;
-
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (
-        settingsRef.current &&
-        event.target instanceof Node &&
-        !settingsRef.current.contains(event.target)
-      ) {
-        setShowSettingsMenu(false);
-      }
-      if (
-        mobileMenuRef.current &&
-        event.target instanceof Node &&
-        !mobileMenuRef.current.contains(event.target)
-      ) {
-        setShowMobileMenu(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, [settingsRef, mobileMenuRef, showSettingsMenu, showMobileMenu]);
-
-  // Keep realtime sync alive - only depends on room ID to avoid feedback loops
-  useEffect(() => {
-    if (!id) return;
-
-    const channel = supabaseService.subscribeToRoom(id, (room) => {
-      // Force current user to be online locally
-      const currentParticipantId =
-        useRoomStore.getState().currentParticipant?.id;
-      if (currentParticipantId) {
-        const updatedRoom = {
-          ...room,
-          participants: room.participants.map((p) =>
-            p.id === currentParticipantId ? { ...p, isOnline: true } : p
-          ),
-        };
-        setRoom(updatedRoom);
-
-        const updated = updatedRoom.participants.find(
-          (p) => p.id === currentParticipantId
-        );
-        if (updated) {
-          setParticipant(updated);
-        }
-      } else {
-        setRoom(room);
-      }
-    });
-
-    return () => {
-      supabaseService.unsubscribeFromRoom(channel);
-    };
-  }, [id, setParticipant, setRoom]);
-
-  // Fallback polling to guarantee UI stays in sync if realtime stalls
-  useEffect(() => {
-    if (!id) return;
-    const interval = setInterval(async () => {
-      try {
-        const latest = await supabaseService.getRoomWithParticipants(id);
-
-        // Force current user to be online locally
-        const currentParticipantId =
-          useRoomStore.getState().currentParticipant?.id;
-        if (currentParticipantId) {
-          const updatedRoom = {
-            ...latest,
-            participants: latest.participants.map((p) =>
-              p.id === currentParticipantId ? { ...p, isOnline: true } : p
-            ),
-          };
-          setRoom(updatedRoom);
-
-          const updated = updatedRoom.participants.find(
-            (p) => p.id === currentParticipantId
-          );
-          if (updated) {
-            setParticipant(updated);
-          }
-        } else {
-          setRoom(latest);
-        }
-      } catch (err) {
-        console.warn("Sync fallback failed", err);
-      }
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [id, setParticipant, setRoom]);
-
-  useEffect(() => {
-    if (!currentRoom || !currentParticipant) return;
-
-    const me = currentRoom.participants.find(
-      (p) => p.id === currentParticipant.id
-    );
-    if (!currentRoom.isRevealed && me && !me.hasVoted) {
-      setSelectedVote(null);
-    }
-  }, [currentParticipant, currentRoom]);
-
-  // Show loading while recovering session
   if (isRecoveringSession) {
     return (
       <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 transition-colors flex items-center justify-center">
@@ -736,11 +198,6 @@ export default function Room() {
     return null;
   }
 
-  const canToggleAutoReveal = currentParticipant.id === currentRoom.creatorId;
-  const canChangeDeck = canToggleAutoReveal;
-  const canRename = canToggleAutoReveal;
-  const canRemoveParticipants = currentParticipant.id === currentRoom.creatorId;
-
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 transition-colors">
       {/* Header */}
@@ -755,7 +212,7 @@ export default function Room() {
               {/* Share Button - Right after title */}
               <button
                 onClick={handleCopyLink}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+                className="p-1.5 sm:p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
                 title={copied ? "Copied!" : "Share room"}
               >
                 {copied ? (
@@ -782,7 +239,7 @@ export default function Room() {
                 <div className="relative" ref={settingsRef}>
                   <button
                     onClick={() => setShowSettingsMenu((v) => !v)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     aria-label={t("room.settings")}
                   >
                     <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -905,7 +362,7 @@ export default function Room() {
               <div className="sm:hidden relative" ref={mobileMenuRef}>
               <button
                 onClick={() => setShowMobileMenu((v) => !v)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 aria-label="Menu"
               >
                 <svg className="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1189,7 +646,7 @@ export default function Room() {
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
                 <span className="uppercase tracking-wide">{t("room.participants")}</span>
-                <span className="ml-auto text-xs font-normal px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                <span className="ml-auto text-xs font-normal px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-800">
                   {currentRoom.participants.length}
                 </span>
               </h3>

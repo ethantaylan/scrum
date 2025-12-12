@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { Room, Participant, VoteValue, DeckType } from '../types';
 import type { Database } from '../types/database.types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 type DBRoom = Database['public']['Tables']['rooms']['Row'];
 type DBParticipant = Database['public']['Tables']['participants']['Row'];
@@ -283,7 +284,7 @@ class SupabaseService {
     return channel;
   }
 
-  unsubscribeFromRoom(channel: any) {
+  unsubscribeFromRoom(channel: RealtimeChannel) {
     supabase.removeChannel(channel);
   }
 

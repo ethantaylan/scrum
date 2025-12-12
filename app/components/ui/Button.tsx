@@ -29,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       outline:
         "border-2 border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950",
       ghost:
-        "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300",
+        "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300",
       danger:
         "bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg",
     };

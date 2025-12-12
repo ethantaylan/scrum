@@ -81,7 +81,7 @@ export function AvatarSelectorModal({
                   className={`h-12 w-12 rounded-lg text-2xl transition-all flex items-center justify-center hover:scale-110 ${
                     selectedAvatar === avatar
                       ? "bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-500 scale-105"
-                      : "bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      : "bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700"
                   }`}
                 >
                   {avatar}
