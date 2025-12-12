@@ -52,6 +52,7 @@ export const translations = {
         madeWith: 'Made with',
         by: 'by',
         madeBy: 'Made by',
+        madeWithLove: 'Made with love by',
       },
       decks: {
         fibonacci: 'Fibonacci',
@@ -186,6 +187,7 @@ export const translations = {
         madeWith: 'Fait avec',
         by: 'par',
         madeBy: 'Fait par',
+        madeWithLove: 'Fait avec amour par',
       },
       decks: {
         fibonacci: 'Fibonacci',

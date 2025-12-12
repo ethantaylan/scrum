@@ -377,14 +377,16 @@ export default function Home() {
       )}
 
       {/* Footer */}
-      <footer className="absolute bottom-0 w-full py-4 text-center text-sm text-gray-600 dark:text-gray-400">
-        <p>
-          {t("home.madeBy")}{" "}
+      <footer className="absolute bottom-0 w-full py-4 text-center text-xs text-gray-600 dark:text-gray-400">
+        <p className="flex items-center justify-center gap-1.5">
+          <span>{t("home.madeWithLove").split(' ').slice(0, -1).join(' ')}</span>
+          <span className="inline-block text-blue-500 dark:text-blue-400 animate-pulse">❤️</span>
+          <span>{t("home.madeWithLove").split(' ').slice(-1)[0]}</span>
           <a
             href="https://github.com/ethantaylan"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium"
           >
             ethantaylan
           </a>
