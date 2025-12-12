@@ -113,6 +113,10 @@ export const translations = {
         kick: 'Kick',
         saveChanges: 'Save Changes',
         saving: 'Saving...',
+        confirmKickTitle: 'Remove participant?',
+        confirmKickMessage: 'Are you sure you want to remove {{nickname}} from the room?',
+        confirmKickButton: 'Remove',
+        cancelButton: 'Cancel',
       },
       shortcuts: {
         title: 'Keyboard shortcuts',
@@ -248,6 +252,10 @@ export const translations = {
         kick: 'Expulser',
         saveChanges: 'Enregistrer',
         saving: 'Enregistrement...',
+        confirmKickTitle: 'Retirer le participant ?',
+        confirmKickMessage: 'Êtes-vous sûr de vouloir retirer {{nickname}} de la salle ?',
+        confirmKickButton: 'Retirer',
+        cancelButton: 'Annuler',
       },
       shortcuts: {
         title: 'Raccourcis clavier',

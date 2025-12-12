@@ -6,8 +6,9 @@ import { ParticipantCard } from "../components/ParticipantCard";
 import { CompactAvatarSelector } from "../components/ui/CompactAvatarSelector";
 import { ProfileEditModal } from "../components/ProfileEditModal";
 import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
+import { ConfirmModal } from "../components/ConfirmModal";
 import { DECK_OPTIONS } from "../constants/decks";
-import type { DeckType } from "../types";
+import type { DeckType, Participant } from "../types";
 import { parseVoteToNumber } from "../lib/votes";
 import { useParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -29,6 +30,7 @@ export default function Room() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [participantToRemove, setParticipantToRemove] = useState<Participant | null>(null);
 
   const {
     currentRoom,
@@ -163,9 +165,6 @@ export default function Room() {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
               {t("home.joinRoom")}
             </h2>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              {t("home.enterNickname")}
-            </p>
           </div>
 
           <div className="space-y-4">
@@ -229,7 +228,6 @@ export default function Room() {
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="ghost"
-                size="lg"
                 fullWidth
                 onClick={() => navigate("/")}
               >
@@ -237,7 +235,6 @@ export default function Room() {
               </Button>
               <Button
                 variant="primary"
-                size="lg"
                 fullWidth
                 onClick={handleJoinFromLink}
                 disabled={!nickname.trim() || isJoining}
@@ -721,7 +718,7 @@ export default function Room() {
                       isRevealed={currentRoom.isRevealed}
                       isCurrentUser={participant.id === currentParticipant.id}
                       canRemove={canRemoveParticipants}
-                      onRemove={() => handleRemoveParticipant(participant.id)}
+                      onRemove={() => setParticipantToRemove(participant)}
                       onEdit={participant.id === currentParticipant.id ? () => setShowProfileEdit(true) : undefined}
                     />
                   ))}
@@ -742,6 +739,21 @@ export default function Room() {
 
       {showShortcutsModal && (
         <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
+      )}
+
+      {participantToRemove && (
+        <ConfirmModal
+          title={t("settings.confirmKickTitle")}
+          message={t("settings.confirmKickMessage", { nickname: participantToRemove.nickname })}
+          confirmText={t("settings.confirmKickButton")}
+          cancelText={t("settings.cancelButton")}
+          variant="danger"
+          onConfirm={() => {
+            handleRemoveParticipant(participantToRemove.id);
+            setParticipantToRemove(null);
+          }}
+          onCancel={() => setParticipantToRemove(null)}
+        />
       )}
 
       {/* Footer with keyboard shortcuts */}
