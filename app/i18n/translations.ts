@@ -116,11 +116,12 @@ export const translations = {
       shortcuts: {
         title: 'Keyboard shortcuts',
         subtitle: 'Stay fast with these commands',
-        reveal: 'Reveal votes (when everyone voted)',
-        newRound: 'Start a new round',
+        reveal: 'Reveal votes',
+        newRound: 'New round',
         copyLink: 'Copy room link',
-        showHelp: 'Open shortcuts help',
+        showHelp: 'Show shortcuts',
         close: 'Close',
+        footer: 'Press {{key}} for shortcuts',
       },
       errors: {
         nicknameRequired: 'Nickname is required',
@@ -249,11 +250,12 @@ export const translations = {
       shortcuts: {
         title: 'Raccourcis clavier',
         subtitle: 'Gagnez du temps avec ces actions',
-        reveal: 'Révéler les votes (quand tous ont voté)',
-        newRound: 'Lancer un nouveau tour',
-        copyLink: 'Copier le lien de la salle',
-        showHelp: 'Ouvrir l’aide des raccourcis',
+        reveal: 'Révéler les votes',
+        newRound: 'Nouveau tour',
+        copyLink: 'Copier le lien',
+        showHelp: 'Voir les raccourcis',
         close: 'Fermer',
+        footer: 'Appuyez sur {{key}} pour les raccourcis',
       },
       errors: {
         nicknameRequired: 'Le pseudo est requis',

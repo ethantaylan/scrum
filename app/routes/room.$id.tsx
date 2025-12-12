@@ -5,6 +5,7 @@ import { VotingCard } from "../components/VotingCard";
 import { ParticipantCard } from "../components/ParticipantCard";
 import { CompactAvatarSelector } from "../components/ui/CompactAvatarSelector";
 import { ProfileEditModal } from "../components/ProfileEditModal";
+import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { DECK_OPTIONS } from "../constants/decks";
 import type { DeckType } from "../types";
 import { parseVoteToNumber } from "../lib/votes";
@@ -14,6 +15,7 @@ import type { Route } from "../+types/root";
 import { Card } from "~/components/ui/Card";
 import { Button } from "~/components/ui/Button";
 import { useRoomController } from "../features/room/useRoomController";
+import { useEffect, useState } from "react";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -26,6 +28,8 @@ export default function Room() {
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
   const {
     currentRoom,
     currentParticipant,
@@ -83,6 +87,59 @@ export default function Room() {
     setShowMobileMenu,
     setNewRoomName,
   } = useRoomController({ roomId: id, t });
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!currentRoom || !currentParticipant || showJoinModal) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Ignore if modal is already open
+      if (showShortcutsModal || showProfileEdit || showSettingsMenu || showMobileMenu) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case " ": // Space - Reveal votes
+          e.preventDefault();
+          if (!currentRoom.isRevealed && totalVoters > 0 && !isRevealingSoon) {
+            startRevealCountdown();
+          }
+          break;
+        case "r": // R - New round
+          if (currentRoom.isRevealed) {
+            handleReset();
+          }
+          break;
+        case "c": // C - Copy link
+          handleCopyLink();
+          break;
+        case "?": // ? - Show shortcuts
+          setShowShortcutsModal(true);
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
+  }, [
+    currentRoom,
+    currentParticipant,
+    showJoinModal,
+    showShortcutsModal,
+    showProfileEdit,
+    showSettingsMenu,
+    showMobileMenu,
+    totalVoters,
+    isRevealingSoon,
+    startRevealCountdown,
+    handleReset,
+    handleCopyLink,
+  ]);
 
   if (isRecoveringSession) {
     return (
@@ -682,6 +739,47 @@ export default function Room() {
           onCancel={() => setShowProfileEdit(false)}
         />
       )}
+
+      {showShortcutsModal && (
+        <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
+      )}
+
+      {/* Footer with keyboard shortcuts */}
+      <footer className="fixed bottom-0 left-0 right-0 py-2 sm:py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700">
+        <div className="container mx-auto px-4 flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
+          {/* Space - Reveal */}
+          <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
+              ⎵
+            </kbd>
+            <span className="hidden sm:inline">{t("shortcuts.reveal")}</span>
+            <span className="sm:hidden">Reveal</span>
+          </div>
+
+          {/* R - New Round */}
+          <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
+              R
+            </kbd>
+            <span className="hidden sm:inline">{t("shortcuts.newRound")}</span>
+            <span className="sm:hidden">Round</span>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+
+          {/* Show all shortcuts button */}
+          <button
+            onClick={() => setShowShortcutsModal(true)}
+            className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors inline-flex items-center gap-1.5"
+          >
+            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
+              ?
+            </kbd>
+            <span className="hidden sm:inline">{t("shortcuts.showHelp")}</span>
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }
