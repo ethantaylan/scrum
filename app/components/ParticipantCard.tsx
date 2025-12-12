@@ -16,7 +16,7 @@ export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRem
   const getVoteDisplay = () => {
     if (!participant.hasVoted) {
       return (
-        <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
           <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-600 animate-pulse" />
         </div>
       );

@@ -19,7 +19,7 @@ import type { DeckType } from "../types";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Scrum Poker - Vote together, estimate better" },
+    { title: "Vote together, estimate better" },
     { name: "description", content: "Real-time scrum poker planning tool" },
   ];
 }
@@ -175,271 +175,289 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 transition-colors">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors">
       {/* Header */}
-      <header className="p-4 flex justify-end items-center gap-2">
+      <header className="absolute top-0 right-0 p-4 sm:p-6 flex items-center gap-2 z-10">
         <LanguageToggle />
         <ThemeToggle />
       </header>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
-        {/* Hero Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
-            {t("app.title")}
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
-            {t("app.subtitle")}
-          </p>
-        </div>
+      {/* Main Content - Hero + Login Side by Side */}
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center relative">
+            {/* Hero Section */}
+            <div className="text-center lg:text-left animate-fade-in">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
+                <span dangerouslySetInnerHTML={{ __html: t("home.heroTitle", { value: "<br />" }) }} />
+                </h1>
+              <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto lg:mx-0">
+                {t("home.heroSubtitle")}
+              </p>
 
-        {/* Main Card */}
-        <Card variant="elevated" className="w-full max-w-lg">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => {
-                setActiveTab("create");
-                setErrors({});
-                setIsAdvancedOpen(false);
-              }}
-              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
-                activeTab === "create"
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
-            >
-              {t("home.createRoom")}
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("join");
-                setErrors({});
-                setIsAdvancedOpen(false);
-              }}
-              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
-                activeTab === "join"
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
-            >
-              {t("home.joinRoom")}
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-8">
-            {/* Essential Fields - Always Visible */}
-            <div className="flex items-end gap-4 mb-6">
-              <CompactAvatarSelector
-                selectedAvatar={avatar}
-                onSelect={handleAvatarSelect}
-              />
-              <div className="flex-1">
-                <Input
-                  label={t("home.enterNickname")}
-                  value={nickname}
-                  onChange={(e) => {
-                    setNickname(e.target.value);
-                    setErrors((prev) => ({ ...prev, nickname: undefined }));
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter" && nickname.trim() && !isLoading) {
-                      if (activeTab === "create") {
-                        handleCreateRoom();
-                      } else if (roomId.trim()) {
-                        handleJoinRoom();
-                      }
-                    }
-                  }}
-                  error={errors.nickname}
-                  placeholder="John Doe"
-                  maxLength={20}
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            {/* Create Room Tab */}
-            {activeTab === "create" && (
-              <div className="space-y-6">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  onClick={handleCreateRoom}
-                  disabled={!nickname.trim() || isLoading}
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      {t("home.creating")}
-                    </span>
-                  ) : (
-                    t("home.createRoom")
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Join Room Tab */}
-            {activeTab === "join" && (
-              <div className="space-y-6">
-                <Input
-                  label={t("home.enterRoomId")}
-                  value={roomId}
-                  onChange={(e) => {
-                    setRoomId(e.target.value);
-                    setErrors((prev) => ({ ...prev, roomId: undefined }));
-                  }}
-                  error={errors.roomId}
-                  placeholder="abc-123-xyz"
-                />
-
-                <Button
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  onClick={() => handleJoinRoom()}
-                  disabled={!nickname.trim() || !roomId.trim() || isLoading}
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      {t("home.joining")}
-                    </span>
-                  ) : (
-                    t("home.joinRoom")
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        </Card>
-        {showPasswordPrompt && pendingRoomInfo && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-              onClick={() => {
-                setShowPasswordPrompt(false);
-                setJoinPassword("");
-                setErrors((prev) => ({ ...prev, password: undefined }));
-              }}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <Card variant="elevated" className="w-full max-w-md relative p-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordPrompt(false);
-                    setJoinPassword("");
-                    setErrors((prev) => ({ ...prev, password: undefined }));
-                  }}
-                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                  aria-label={t("home.cancel")}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {t("home.passwordModalTitle")}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {t("home.passwordModalSubtitle", {
-                    roomName: pendingRoomInfo.name,
-                  })}
-                </p>
-
-                <div className="mt-4 space-y-4">
-                  <Input
-                    label={t("home.password")}
-                    type="password"
-                    value={joinPassword}
-                    onChange={(e) => {
-                      setJoinPassword(e.target.value);
-                      setErrors((prev) => ({ ...prev, password: undefined }));
-                    }}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        handleJoinRoom(joinPassword);
-                      }
-                    }}
-                    error={errors.password}
-                    placeholder={t("home.passwordPlaceholder")}
-                    maxLength={50}
-                    autoFocus
-                  />
-
-                  <div className="flex justify-end gap-3">
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setShowPasswordPrompt(false);
-                        setJoinPassword("");
-                        setErrors((prev) => ({ ...prev, password: undefined }));
-                      }}
-                      disabled={isLoading}
-                    >
-                      {t("home.cancel")}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={() => handleJoinRoom(joinPassword)}
-                      disabled={!joinPassword.trim() || isLoading}
-                    >
-                      {isLoading ? t("home.joining") : t("home.submitPassword")}
-                    </Button>
+              {/* Features - Compact Version */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto lg:mx-0">
+                <div className="flex items-center gap-3 lg:flex-col lg:items-start">
+                  <div className="text-2xl">⚡</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {t("home.featureRealtime")}
+                    </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 hidden lg:block">
+                      {t("home.featureRealtimeDesc")}
+                    </p>
                   </div>
                 </div>
-              </Card>
+                <div className="flex items-center gap-3 lg:flex-col lg:items-start">
+                  <div className="text-2xl">🎯</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {t("home.featureSimple")}
+                    </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 hidden lg:block">
+                      {t("home.featureSimpleDesc")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 lg:flex-col lg:items-start">
+                  <div className="text-2xl">🌍</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {t("home.featureMultilingual")}
+                    </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 hidden lg:block">
+                      {t("home.featureMultilingualDesc")}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </>
-        )}
 
-        {/* Features */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
-          <Card variant="bordered" className="p-6 text-center">
-            <div className="text-3xl mb-2">⚡</div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-              Real-time
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Instant vote updates for all participants
-            </p>
-          </Card>
-          <Card variant="bordered" className="p-6 text-center">
-            <div className="text-3xl mb-2">🎯</div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-              Simple
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No registration required, just enter and vote
-            </p>
-          </Card>
-          <Card variant="bordered" className="p-6 text-center">
-            <div className="text-3xl mb-2">🌍</div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-              Multilingual
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Available in English and French
-            </p>
-          </Card>
+            {/* Vertical Separator - Hidden on mobile, visible on desktop */}
+            <div className="hidden lg:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-3/4 w-px bg-gradient-to-b from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
+
+            {/* Login Card */}
+            <Card
+              variant="elevated"
+              className="w-full max-w-md mx-auto shadow-2xl shadow-blue-500/10 dark:shadow-blue-500/5 backdrop-blur-sm"
+            >
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    setActiveTab("create");
+                    setErrors({});
+                  }}
+                  className={`flex-1 px-6 py-4 text-center font-semibold transition-all ${
+                    activeTab === "create"
+                      ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  {t("home.createRoom")}
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("join");
+                    setErrors({});
+                  }}
+                  className={`flex-1 px-6 py-4 text-center font-semibold transition-all ${
+                    activeTab === "join"
+                      ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  {t("home.joinRoom")}
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="p-6 sm:p-8">
+                {/* Essential Fields - Always Visible */}
+                <div className="flex items-end gap-4 mb-6">
+                  <CompactAvatarSelector
+                    selectedAvatar={avatar}
+                    onSelect={handleAvatarSelect}
+                  />
+                  <div className="flex-1">
+                    <Input
+                      label={t("home.enterNickname")}
+                      value={nickname}
+                      onChange={(e) => {
+                        setNickname(e.target.value);
+                        setErrors((prev) => ({ ...prev, nickname: undefined }));
+                      }}
+                      onKeyPress={(e) => {
+                        if (
+                          e.key === "Enter" &&
+                          nickname.trim() &&
+                          !isLoading
+                        ) {
+                          if (activeTab === "create") {
+                            handleCreateRoom();
+                          } else if (roomId.trim()) {
+                            handleJoinRoom();
+                          }
+                        }
+                      }}
+                      error={errors.nickname}
+                      placeholder="John Doe"
+                      maxLength={20}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Create Room Tab */}
+                {activeTab === "create" && (
+                  <div className="space-y-6">
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={handleCreateRoom}
+                      disabled={!nickname.trim() || isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          {t("home.creating")}
+                        </span>
+                      ) : (
+                        t("home.createRoom")
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Join Room Tab */}
+                {activeTab === "join" && (
+                  <div className="space-y-6">
+                    <Input
+                      label={t("home.enterRoomId")}
+                      value={roomId}
+                      onChange={(e) => {
+                        setRoomId(e.target.value);
+                        setErrors((prev) => ({ ...prev, roomId: undefined }));
+                      }}
+                      error={errors.roomId}
+                      placeholder="abc-123-xyz"
+                    />
+
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={() => handleJoinRoom()}
+                      disabled={!nickname.trim() || !roomId.trim() || isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          {t("home.joining")}
+                        </span>
+                      ) : (
+                        t("home.joinRoom")
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
+
+      {/* Password Prompt Modal */}
+      {showPasswordPrompt && pendingRoomInfo && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            onClick={() => {
+              setShowPasswordPrompt(false);
+              setJoinPassword("");
+              setErrors((prev) => ({ ...prev, password: undefined }));
+            }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <Card variant="elevated" className="w-full max-w-md relative p-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordPrompt(false);
+                  setJoinPassword("");
+                  setErrors((prev) => ({ ...prev, password: undefined }));
+                }}
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label={t("home.cancel")}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {t("home.passwordModalTitle")}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {t("home.passwordModalSubtitle", {
+                  roomName: pendingRoomInfo.name,
+                })}
+              </p>
+
+              <div className="mt-4 space-y-4">
+                <Input
+                  label={t("home.password")}
+                  type="password"
+                  value={joinPassword}
+                  onChange={(e) => {
+                    setJoinPassword(e.target.value);
+                    setErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleJoinRoom(joinPassword);
+                    }
+                  }}
+                  error={errors.password}
+                  placeholder={t("home.passwordPlaceholder")}
+                  maxLength={50}
+                  autoFocus
+                />
+
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowPasswordPrompt(false);
+                      setJoinPassword("");
+                      setErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
+                    disabled={isLoading}
+                  >
+                    {t("home.cancel")}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => handleJoinRoom(joinPassword)}
+                    disabled={!joinPassword.trim() || isLoading}
+                  >
+                    {isLoading ? t("home.joining") : t("home.submitPassword")}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }
