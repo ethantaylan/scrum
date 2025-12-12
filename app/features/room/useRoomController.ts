@@ -183,25 +183,9 @@ export function useRoomController({ roomId, t }: UseRoomControllerArgs) {
     fetchRoomInfo();
   }, [roomId, service, showJoinModal]);
 
-  useEffect(() => {
-    if (!currentParticipant?.id) return;
-
-    const goOnline = async () => {
-      try {
-        await service.updateParticipantStatus(currentParticipant.id, true);
-      } catch (err) {
-        console.warn("Unable to update status online", err);
-      }
-    };
-
-    goOnline();
-    const heartbeat = setInterval(goOnline, 15000);
-
-    return () => {
-      clearInterval(heartbeat);
-      service.updateParticipantStatus(currentParticipant.id, false).catch(() => {});
-    };
-  }, [currentParticipant?.id, service]);
+  // Track online status via presence (handled in subscribeToRoom now)
+  const onlineParticipantIdsRef = useRef<Set<string>>(new Set());
+  const [, forceUpdate] = useState({});
 
   useEffect(() => {
     if (!currentRoom) return;
@@ -508,62 +492,69 @@ export function useRoomController({ roomId, t }: UseRoomControllerArgs) {
   }, [settingsRef, mobileMenuRef, showSettingsMenu, showMobileMenu]);
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !currentParticipant?.id) return;
 
-    const channel = service.subscribeToRoom(roomId, (room) => {
-      const currentParticipantId = useRoomStore.getState().currentParticipant?.id;
-      if (currentParticipantId) {
+    const channel = service.subscribeToRoom(
+      roomId,
+      currentParticipant.id,
+      (room) => {
+        // Apply presence state to participants
         const updatedRoom = {
           ...room,
-          participants: room.participants.map((p) =>
-            p.id === currentParticipantId ? { ...p, isOnline: true } : p
-          ),
+          participants: room.participants.map((p) => ({
+            ...p,
+            isOnline: onlineParticipantIdsRef.current.has(p.id),
+          })),
         };
         setRoom(updatedRoom);
 
-        const updated = updatedRoom.participants.find((p) => p.id === currentParticipantId);
+        const updated = updatedRoom.participants.find((p) => p.id === currentParticipant.id);
         if (updated) {
           setParticipant(updated);
         }
-      } else {
-        setRoom(room);
+      },
+      (onlineIds) => {
+        // Update online participant IDs when presence changes
+        onlineParticipantIdsRef.current = new Set(onlineIds);
+        forceUpdate({});
       }
-    });
+    );
 
     return () => {
       service.unsubscribeFromRoom(channel);
     };
-  }, [roomId, service, setParticipant, setRoom]);
+  }, [roomId, currentParticipant?.id, service, setParticipant, setRoom]);
 
+  // Fallback sync every 1 minute
   useEffect(() => {
     if (!roomId) return;
     const interval = setInterval(async () => {
       try {
         const latest = await service.getRoomWithParticipants(roomId);
 
+        // Apply current presence state
+        const updatedRoom = {
+          ...latest,
+          participants: latest.participants.map((p) => ({
+            ...p,
+            isOnline: onlineParticipantIdsRef.current.has(p.id),
+          })),
+        };
+        setRoom(updatedRoom);
+
         const currentParticipantId = useRoomStore.getState().currentParticipant?.id;
         if (currentParticipantId) {
-          const updatedRoom = {
-            ...latest,
-            participants: latest.participants.map((p) =>
-              p.id === currentParticipantId ? { ...p, isOnline: true } : p
-            ),
-          };
-          setRoom(updatedRoom);
-
           const updated = updatedRoom.participants.find(
             (p) => p.id === currentParticipantId
           );
           if (updated) {
             setParticipant(updated);
           }
-        } else {
-          setRoom(latest);
         }
       } catch (err) {
         console.warn("Sync fallback failed", err);
       }
-    }, 4000);
+    }, 60000); // 1 minute
 
     return () => clearInterval(interval);
   }, [roomId, service, setParticipant, setRoom]);

@@ -55,6 +55,7 @@ export interface Database {
           is_online: boolean
           is_spectator: boolean
           avatar: string
+          last_seen: string
           created_at: string
           updated_at: string
         }
@@ -67,6 +68,7 @@ export interface Database {
           is_online?: boolean
           is_spectator?: boolean
           avatar?: string
+          last_seen?: string
           created_at?: string
           updated_at?: string
         }
@@ -79,6 +81,7 @@ export interface Database {
           is_online?: boolean
           is_spectator?: boolean
           avatar?: string
+          last_seen?: string
           created_at?: string
           updated_at?: string
         }

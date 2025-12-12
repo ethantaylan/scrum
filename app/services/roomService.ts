@@ -17,6 +17,7 @@ export interface RoomService {
   revealVotes(roomId: string): Promise<void>;
   resetVotes(roomId: string): Promise<void>;
   updateParticipantStatus(participantId: string, isOnline: boolean): Promise<void>;
+  updateParticipantLastSeen(participantId: string): Promise<void>;
   updateParticipantProfile(participantId: string, updates: { nickname?: string; avatar?: string }): Promise<void>;
   updateRoomName(roomId: string, newName: string, creatorId: string): Promise<void>;
   toggleAutoReveal(roomId: string, autoReveal: boolean, creatorId: string): Promise<void>;
@@ -24,7 +25,12 @@ export interface RoomService {
   kickParticipant(roomId: string, participantId: string, creatorId: string): Promise<void>;
   checkAllVoted(roomId: string): Promise<boolean>;
   getRoomWithParticipants(roomId: string): Promise<Room>;
-  subscribeToRoom(roomId: string, callback: (room: Room) => void): RealtimeChannel;
+  subscribeToRoom(
+    roomId: string,
+    participantId: string,
+    callback: (room: Room) => void,
+    onPresenceChange?: (onlineParticipantIds: string[]) => void
+  ): RealtimeChannel;
   unsubscribeFromRoom(channel: RealtimeChannel): void;
 }
 

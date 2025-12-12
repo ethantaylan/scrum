@@ -128,7 +128,7 @@ class SupabaseService {
 
   async reconnectToRoom(roomId: string, participantId: string): Promise<{ room: Room; participant: Participant } | null> {
     // Check if room exists
-    const { data: roomData, error: roomError } = await supabase
+    const { error: roomError } = await supabase
       .from('rooms')
       .select()
       .eq('id', roomId)
@@ -146,8 +146,7 @@ class SupabaseService {
 
     if (participantError || !participantData) return null;
 
-    // Update participant status to online
-    await this.updateParticipantStatus(participantId, true);
+    // Online status will be handled by Presence tracking
 
     const room = await this.getRoomWithParticipants(roomId);
     const participant = this.mapParticipant(participantData);
@@ -216,6 +215,15 @@ class SupabaseService {
     if (error) throw error;
   }
 
+  async updateParticipantLastSeen(participantId: string): Promise<void> {
+    const { error } = await supabase
+      .from('participants')
+      .update({ last_seen: new Date().toISOString() })
+      .eq('id', participantId);
+
+    if (error) throw error;
+  }
+
   async updateParticipantProfile(participantId: string, updates: { nickname?: string; avatar?: string }): Promise<void> {
     const updateData: Record<string, unknown> = {};
     if (updates.nickname !== undefined) updateData.nickname = updates.nickname;
@@ -248,8 +256,22 @@ class SupabaseService {
     return this.mapRoom(roomData, participantsData || []);
   }
 
-  subscribeToRoom(roomId: string, callback: (room: Room) => void) {
-    const channel = supabase.channel(`room:${roomId}`);
+  subscribeToRoom(
+    roomId: string,
+    participantId: string,
+    callback: (room: Room) => void,
+    onPresenceChange?: (onlineParticipantIds: string[]) => void
+  ) {
+    const channel = supabase.channel(`room:${roomId}`, {
+      config: {
+        presence: {
+          key: participantId,
+        },
+      },
+    });
+
+    // Track online participants via presence
+    const presenceState = new Map<string, boolean>();
 
     // Subscribe to room changes
     channel
@@ -262,6 +284,7 @@ class SupabaseService {
           filter: `id=eq.${roomId}`,
         },
         async () => {
+          console.log('[Realtime] Room update detected');
           const room = await this.getRoomWithParticipants(roomId);
           callback(room);
         }
@@ -275,16 +298,88 @@ class SupabaseService {
           filter: `room_id=eq.${roomId}`,
         },
         async () => {
+          console.log('[Realtime] Participants update detected');
           const room = await this.getRoomWithParticipants(roomId);
           callback(room);
         }
       )
-      .subscribe();
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const onlineIds: string[] = [];
+
+        Object.keys(state).forEach((key) => {
+          const presences = state[key];
+          if (presences && presences.length > 0) {
+            onlineIds.push(key);
+            presenceState.set(key, true);
+          }
+        });
+
+        // Mark offline those not in the state
+        presenceState.forEach((_, id) => {
+          if (!onlineIds.includes(id)) {
+            presenceState.delete(id);
+          }
+        });
+
+        console.log('[Presence] Sync - Online IDs:', onlineIds);
+        if (onPresenceChange) {
+          onPresenceChange(onlineIds);
+        }
+      })
+      .on('presence', { event: 'join' }, ({ key }) => {
+        console.log('[Presence] Join:', key);
+        presenceState.set(key, true);
+        if (onPresenceChange) {
+          onPresenceChange(Array.from(presenceState.keys()));
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        console.log('[Presence] Leave:', key);
+        presenceState.delete(key);
+        if (onPresenceChange) {
+          onPresenceChange(Array.from(presenceState.keys()));
+        }
+      })
+      .subscribe(async (status) => {
+        console.log('[Realtime] Channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          // Track this participant's presence
+          console.log('[Presence] Tracking participant:', participantId);
+
+          // Initial presence track
+          await channel.track({
+            participant_id: participantId,
+            online_at: new Date().toISOString(),
+          });
+
+          // Update last_seen on initial connection
+          await this.updateParticipantLastSeen(participantId);
+
+          // Update last_seen every 30 seconds to keep track of activity
+          const heartbeatInterval = setInterval(async () => {
+            try {
+              await this.updateParticipantLastSeen(participantId);
+            } catch (err) {
+              console.warn('[Presence] Failed to update last_seen:', err);
+            }
+          }, 30000);
+
+          // Store interval ID on the channel for cleanup
+          (channel as any)._lastSeenInterval = heartbeatInterval;
+        }
+      });
 
     return channel;
   }
 
   unsubscribeFromRoom(channel: RealtimeChannel) {
+    // Clear last_seen heartbeat interval if it exists
+    const intervalId = (channel as any)._lastSeenInterval;
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+
     supabase.removeChannel(channel);
   }
 
