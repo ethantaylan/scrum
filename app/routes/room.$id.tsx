@@ -7,6 +7,7 @@ import { CompactAvatarSelector } from "../components/ui/CompactAvatarSelector";
 import { ProfileEditModal } from "../components/ProfileEditModal";
 import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { ContactModal } from "../components/ContactModal";
 import { DECK_OPTIONS } from "../constants/decks";
 import type { DeckType, Participant } from "../types";
 import { parseVoteToNumber } from "../lib/votes";
@@ -30,6 +31,7 @@ export default function Room() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [participantToRemove, setParticipantToRemove] = useState<Participant | null>(null);
 
   const {
@@ -741,6 +743,10 @@ export default function Room() {
         <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
       )}
 
+      {showContactModal && (
+        <ContactModal onClose={() => setShowContactModal(false)} />
+      )}
+
       {participantToRemove && (
         <ConfirmModal
           title={t("settings.confirmKickTitle")}
@@ -758,38 +764,53 @@ export default function Room() {
 
       {/* Footer with keyboard shortcuts */}
       <footer className="fixed bottom-0 left-0 right-0 py-2 sm:py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700">
-        <div className="container mx-auto px-4 flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
-          {/* Space - Reveal */}
-          <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
-              ⎵
-            </kbd>
-            <span className="hidden sm:inline">{t("shortcuts.reveal")}</span>
-            <span className="sm:hidden">Reveal</span>
-          </div>
-
-          {/* R - New Round */}
-          <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
-              R
-            </kbd>
-            <span className="hidden sm:inline">{t("shortcuts.newRound")}</span>
-            <span className="sm:hidden">Round</span>
-          </div>
-
-          {/* Divider */}
-          <div className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-
-          {/* Show all shortcuts button */}
+        <div className="container mx-auto px-4 flex items-center justify-between gap-4">
+          {/* Left: Contact */}
           <button
-            onClick={() => setShowShortcutsModal(true)}
-            className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors inline-flex items-center gap-1.5"
+            onClick={() => setShowContactModal(true)}
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors inline-flex items-center gap-1.5"
+            title={t("contact.title")}
           >
-            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
-              ?
-            </kbd>
-            <span className="hidden sm:inline">{t("shortcuts.showHelp")}</span>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span className="hidden sm:inline">{t("contact.button")}</span>
           </button>
+
+          {/* Center: Keyboard shortcuts */}
+          <div className="flex items-center gap-4 sm:gap-6">
+            {/* Space - Reveal */}
+            <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
+                ⎵
+              </kbd>
+              <span className="hidden sm:inline">{t("shortcuts.reveal")}</span>
+              <span className="sm:hidden">Reveal</span>
+            </div>
+
+            {/* R - New Round */}
+            <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
+                R
+              </kbd>
+              <span className="hidden sm:inline">{t("shortcuts.newRound")}</span>
+              <span className="sm:hidden">Round</span>
+            </div>
+
+            {/* Show all shortcuts button */}
+            <button
+              onClick={() => setShowShortcutsModal(true)}
+              className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors inline-flex items-center gap-1.5"
+            >
+              <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
+                ?
+              </kbd>
+              <span className="hidden sm:inline">{t("shortcuts.showHelp")}</span>
+            </button>
+          </div>
+
+          {/* Right: Empty space for symmetry */}
+          <div className="w-16 sm:w-20"></div>
         </div>
       </footer>
     </div>

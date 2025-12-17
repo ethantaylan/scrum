@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/home";
 import { Button } from "../components/ui/Button";
@@ -6,6 +7,7 @@ import { Card } from "../components/ui/Card";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { LanguageToggle } from "../components/ui/LanguageToggle";
 import { CompactAvatarSelector } from "../components/ui/CompactAvatarSelector";
+import { ContactModal } from "../components/ContactModal";
 import { useHomeController } from "../features/home/useHomeController";
 
 export function meta({}: Route.MetaArgs) {
@@ -18,6 +20,7 @@ export function meta({}: Route.MetaArgs) {
 export default function Home() {
   const { t } = useTranslation();
   const { state, modals, flags, errors, actions } = useHomeController(t);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors">
@@ -376,21 +379,44 @@ export default function Home() {
         </>
       )}
 
+      {/* Contact Modal */}
+      {showContactModal && (
+        <ContactModal onClose={() => setShowContactModal(false)} />
+      )}
+
       {/* Footer */}
       <footer className="absolute bottom-0 w-full py-4 text-center text-xs text-gray-600 dark:text-gray-400">
-        <p className="flex items-center justify-center gap-1.5">
-          <span>{t("home.madeWithLove").split(' ').slice(0, -1).join(' ')}</span>
-          <span className="inline-block text-blue-500 dark:text-blue-400 animate-pulse">❤️</span>
-          <span>{t("home.madeWithLove").split(' ').slice(-1)[0]}</span>
-          <a
-            href="https://github.com/ethantaylan"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium"
+        <div className="flex items-center justify-center gap-4">
+          {/* Contact button */}
+          <button
+            onClick={() => setShowContactModal(true)}
+            className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors inline-flex items-center gap-1.5"
+            title={t("contact.title")}
           >
-            ethantaylan
-          </a>
-        </p>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span>{t("contact.button")}</span>
+          </button>
+
+          {/* Divider */}
+          <span className="text-gray-400">•</span>
+
+          {/* Made with love */}
+          <p className="flex items-center gap-1.5">
+            <span>{t("home.madeWithLove").split(' ').slice(0, -1).join(' ')}</span>
+            <span className="inline-block text-blue-500 dark:text-blue-400 animate-pulse">❤️</span>
+            <span>{t("home.madeWithLove").split(' ').slice(-1)[0]}</span>
+            <a
+              href="https://github.com/ethantaylan"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium"
+            >
+              ethantaylan
+            </a>
+          </p>
+        </div>
       </footer>
     </div>
   );
