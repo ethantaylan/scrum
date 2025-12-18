@@ -13,5 +13,15 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 10,
     },
+    timeout: 20000, // Increase timeout for slower/corporate networks
+    heartbeatIntervalMs: 30000, // Adjust heartbeat interval
+  },
+  auth: {
+    persistSession: true,
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'supabase-js-web',
+    },
   },
 });

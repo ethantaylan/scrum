@@ -31,6 +31,9 @@ export interface RoomInfo {
 }
 
 class SupabaseService {
+  private pollingIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private channelStatus: Map<string, 'connected' | 'error' | 'polling'> = new Map();
+
   async getRoomInfo(roomId: string): Promise<RoomInfo> {
     const { data: roomData, error } = await supabase
       .from('rooms')
@@ -262,7 +265,8 @@ class SupabaseService {
     callback: (room: Room) => void,
     onPresenceChange?: (onlineParticipantIds: string[]) => void
   ) {
-    const channel = supabase.channel(`room:${roomId}`, {
+    const channelKey = `room:${roomId}`;
+    const channel = supabase.channel(channelKey, {
       config: {
         presence: {
           key: participantId,
@@ -272,6 +276,33 @@ class SupabaseService {
 
     // Track online participants via presence
     const presenceState = new Map<string, boolean>();
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+
+    // Fallback polling function
+    const startPollingFallback = () => {
+      console.warn('[Realtime] Starting polling fallback for room:', roomId);
+      this.channelStatus.set(channelKey, 'polling');
+
+      // Clear any existing polling interval
+      const existingInterval = this.pollingIntervals.get(channelKey);
+      if (existingInterval) {
+        clearInterval(existingInterval);
+      }
+
+      // Poll every 3 seconds
+      const pollingInterval = setInterval(async () => {
+        try {
+          const room = await this.getRoomWithParticipants(roomId);
+          callback(room);
+        } catch (err) {
+          console.error('[Polling] Error fetching room data:', err);
+        }
+      }, 3000);
+
+      this.pollingIntervals.set(channelKey, pollingInterval);
+      (channel as any)._pollingInterval = pollingInterval;
+    };
 
     // Subscribe to room changes
     channel
@@ -341,9 +372,54 @@ class SupabaseService {
           onPresenceChange(Array.from(presenceState.keys()));
         }
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status, err) => {
         console.log('[Realtime] Channel status:', status);
-        if (status === 'SUBSCRIBED') {
+
+        // Enhanced error handling
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] Channel error details:', {
+            error: err,
+            roomId,
+            participantId,
+            reconnectAttempts,
+          });
+
+          this.channelStatus.set(channelKey, 'error');
+
+          // Attempt reconnection
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            console.log(`[Realtime] Attempting reconnection ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`);
+
+            // Wait before reconnecting (exponential backoff)
+            setTimeout(() => {
+              supabase.removeChannel(channel);
+              // Retry subscription would happen if you call subscribeToRoom again
+            }, Math.min(1000 * Math.pow(2, reconnectAttempts), 10000));
+          } else {
+            console.warn('[Realtime] Max reconnection attempts reached. Falling back to polling.');
+            startPollingFallback();
+          }
+        } else if (status === 'TIMED_OUT') {
+          console.error('[Realtime] Connection timed out. This may indicate network restrictions (firewall/VPN).');
+          this.channelStatus.set(channelKey, 'error');
+          startPollingFallback();
+        } else if (status === 'CLOSED') {
+          console.warn('[Realtime] Channel closed');
+          this.channelStatus.set(channelKey, 'error');
+        } else if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Successfully connected via WebSocket');
+          this.channelStatus.set(channelKey, 'connected');
+          reconnectAttempts = 0; // Reset counter on success
+
+          // Clear any polling fallback if it was active
+          const pollingInterval = this.pollingIntervals.get(channelKey);
+          if (pollingInterval) {
+            console.log('[Realtime] Clearing polling fallback, WebSocket connected');
+            clearInterval(pollingInterval);
+            this.pollingIntervals.delete(channelKey);
+          }
+
           // Track this participant's presence
           console.log('[Presence] Tracking participant:', participantId);
 
@@ -375,9 +451,22 @@ class SupabaseService {
 
   unsubscribeFromRoom(channel: RealtimeChannel) {
     // Clear last_seen heartbeat interval if it exists
-    const intervalId = (channel as any)._lastSeenInterval;
-    if (intervalId) {
-      clearInterval(intervalId);
+    const heartbeatInterval = (channel as any)._lastSeenInterval;
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+    }
+
+    // Clear polling interval if it exists
+    const pollingInterval = (channel as any)._pollingInterval;
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    // Clean up from tracking maps
+    const channelName = (channel as any).topic;
+    if (channelName) {
+      this.pollingIntervals.delete(channelName);
+      this.channelStatus.delete(channelName);
     }
 
     supabase.removeChannel(channel);
