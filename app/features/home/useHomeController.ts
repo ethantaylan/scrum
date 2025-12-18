@@ -112,6 +112,7 @@ export function useHomeController(t: TFunction<"translation">) {
         deckType,
         password: undefined,
         autoReveal,
+        isSpectator,
       });
 
       setRoom(room);

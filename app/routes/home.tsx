@@ -159,6 +159,18 @@ export default function Home() {
                 {/* Create Room Tab */}
                 {state.activeTab === "create" && (
                   <div className="space-y-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={state.isSpectator}
+                        onChange={(e) => actions.setIsSpectator(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {t("home.createAsSpectator")}
+                      </span>
+                    </label>
+
                     <Button
                       variant="primary"
                       fullWidth
@@ -190,6 +202,18 @@ export default function Home() {
                       error={errors.roomId}
                       placeholder="abc-123-xyz"
                     />
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={state.isSpectator}
+                        onChange={(e) => actions.setIsSpectator(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {t("home.joinAsSpectator")}
+                      </span>
+                    </label>
 
                     <Button
                       variant="primary"

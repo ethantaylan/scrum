@@ -13,6 +13,7 @@ export interface CreateRoomOptions {
   deckType: DeckType;
   password?: string;
   autoReveal: boolean;
+  isSpectator?: boolean;
 }
 
 export interface JoinRoomOptions {
@@ -75,7 +76,7 @@ class SupabaseService {
         room_id: roomData.id,
         nickname: options.participantNickname,
         avatar: options.avatar,
-        is_spectator: false,
+        is_spectator: options.isSpectator ?? false,
       })
       .select()
       .single();
@@ -235,6 +236,20 @@ class SupabaseService {
     const { error } = await supabase
       .from('participants')
       .update(updateData)
+      .eq('id', participantId);
+
+    if (error) throw error;
+  }
+
+  async toggleSpectatorStatus(participantId: string, isSpectator: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('participants')
+      .update({
+        is_spectator: isSpectator,
+        // Reset vote when switching to spectator
+        vote: isSpectator ? null : null,
+        has_voted: isSpectator ? false : false,
+      })
       .eq('id', participantId);
 
     if (error) throw error;

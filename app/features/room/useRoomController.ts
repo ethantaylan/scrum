@@ -389,6 +389,45 @@ export function useRoomController({ roomId, t }: UseRoomControllerArgs) {
     [currentParticipant, currentRoom, service, setParticipant, setRoom]
   );
 
+  const handleToggleSpectator = useCallback(
+    async () => {
+      if (!currentParticipant || !currentRoom) return;
+
+      const newSpectatorStatus = !currentParticipant.isSpectator;
+
+      // Optimistically update UI
+      const updatedParticipant = {
+        ...currentParticipant,
+        isSpectator: newSpectatorStatus,
+        vote: newSpectatorStatus ? null : currentParticipant.vote,
+        hasVoted: newSpectatorStatus ? false : currentParticipant.hasVoted,
+      };
+
+      setParticipant(updatedParticipant);
+      setRoom({
+        ...currentRoom,
+        participants: currentRoom.participants.map((p) =>
+          p.id === currentParticipant.id ? updatedParticipant : p
+        ),
+      });
+
+      // Reset selected vote if switching to spectator
+      if (newSpectatorStatus) {
+        setSelectedVote(null);
+      }
+
+      try {
+        await service.toggleSpectatorStatus(currentParticipant.id, newSpectatorStatus);
+      } catch (error) {
+        console.error("Failed to toggle spectator status:", error);
+        // Revert on error
+        setParticipant(currentParticipant);
+        setRoom(currentRoom);
+      }
+    },
+    [currentParticipant, currentRoom, service, setParticipant, setRoom]
+  );
+
   const handleJoinFromLink = async () => {
     if (!nickname.trim()) {
       setJoinError(t("errors.nicknameRequired"));
@@ -644,6 +683,7 @@ export function useRoomController({ roomId, t }: UseRoomControllerArgs) {
     handleRenameRoom,
     handleRemoveParticipant,
     handleUpdateProfile,
+    handleToggleSpectator,
     handleJoinFromLink,
   };
 }

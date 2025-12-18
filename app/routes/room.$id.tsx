@@ -78,6 +78,7 @@ export default function Room() {
     handleRenameRoom,
     handleRemoveParticipant,
     handleUpdateProfile,
+    handleToggleSpectator,
     handleJoinFromLink,
     startRevealCountdown,
     handleVote,
@@ -512,27 +513,12 @@ export default function Room() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Main Voting Area */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Voting Status */}
             <Card variant="bordered" className="p-4 sm:p-6">
-              {showEveryoneVoted && (
-                <div className="mb-4 p-3 rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30 flex items-center gap-3">
-                  <span className="text-xl">✅</span>
-                  <div>
-                    <p className="text-sm font-semibold text-green-800 dark:text-green-200">
-                      {t("room.everyoneVoted")}
-                    </p>
-                    <p className="text-xs text-green-700 dark:text-green-300">
-                      {currentRoom.autoReveal
-                        ? t("room.autoRevealNotice")
-                        : t("room.revealHint")}
-                    </p>
-                  </div>
-                </div>
-              )}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white"></h2>
@@ -542,16 +528,26 @@ export default function Room() {
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                   {!currentRoom.isRevealed &&
-                    !currentParticipant.isSpectator &&
                     totalVoters > 0 &&
                     !isRevealingSoon && (
                       <Button
                         variant="primary"
                         onClick={startRevealCountdown}
                         fullWidth
-                        className="sm:w-auto"
+                        className={`sm:w-auto ${
+                          showEveryoneVoted
+                            ? 'ring-2 ring-green-400 dark:ring-green-500 ring-offset-2 dark:ring-offset-gray-900'
+                            : ''
+                        }`}
                       >
-                        {t("room.reveal")}
+                        <span className="flex items-center justify-center gap-2">
+                          {showEveryoneVoted && (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          {t("room.reveal")}
+                        </span>
                       </Button>
                     )}
                   {currentRoom.isRevealed && (
@@ -722,6 +718,7 @@ export default function Room() {
                       canRemove={canRemoveParticipants}
                       onRemove={() => setParticipantToRemove(participant)}
                       onEdit={participant.id === currentParticipant.id ? () => setShowProfileEdit(true) : undefined}
+                      onToggleSpectator={participant.id === currentParticipant.id ? handleToggleSpectator : undefined}
                     />
                   ))}
               </div>

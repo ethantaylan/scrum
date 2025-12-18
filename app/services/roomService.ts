@@ -19,6 +19,7 @@ export interface RoomService {
   updateParticipantStatus(participantId: string, isOnline: boolean): Promise<void>;
   updateParticipantLastSeen(participantId: string): Promise<void>;
   updateParticipantProfile(participantId: string, updates: { nickname?: string; avatar?: string }): Promise<void>;
+  toggleSpectatorStatus(participantId: string, isSpectator: boolean): Promise<void>;
   updateRoomName(roomId: string, newName: string, creatorId: string): Promise<void>;
   toggleAutoReveal(roomId: string, autoReveal: boolean, creatorId: string): Promise<void>;
   updateDeckType(roomId: string, deckType: DeckType, creatorId: string): Promise<void>;

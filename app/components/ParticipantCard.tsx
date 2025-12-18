@@ -8,9 +8,10 @@ interface ParticipantCardProps {
   canRemove?: boolean;
   onRemove?: () => void;
   onEdit?: () => void;
+  onToggleSpectator?: () => void;
 }
 
-export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRemove, onRemove, onEdit }: ParticipantCardProps) {
+export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRemove, onRemove, onEdit, onToggleSpectator }: ParticipantCardProps) {
   const { t } = useTranslation();
 
   const getVoteDisplay = () => {
@@ -44,8 +45,8 @@ export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRem
     <div
       className={`group relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-200 ${
         isCurrentUser
-          ? 'bg-blue-50 dark:bg-blue-950/50 ring-1 ring-blue-200 dark:ring-blue-800'
-          : 'bg-white dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800'
+          ? 'bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800'
+          : 'bg-white dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent'
       } ${participant.isSpectator ? 'opacity-60' : ''} ${participant.isOnline ? '' : 'opacity-50'}`}
     >
       {/* Avatar with online indicator */}
@@ -80,6 +81,30 @@ export function ParticipantCard({ participant, isRevealed, isCurrentUser, canRem
 
       {/* Action buttons */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {isCurrentUser && onToggleSpectator && (
+          <button
+            onClick={onToggleSpectator}
+            className={`p-1.5 rounded-lg transition-colors ${
+              participant.isSpectator
+                ? 'hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400'
+                : 'hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-600 dark:text-purple-400'
+            }`}
+            title={participant.isSpectator ? 'Switch to participant' : 'Switch to spectator'}
+          >
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              {participant.isSpectator ? (
+                // User icon (participant)
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              ) : (
+                // Eye icon (spectator)
+                <>
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                </>
+              )}
+            </svg>
+          </button>
+        )}
         {isCurrentUser && onEdit && (
           <button
             onClick={onEdit}
